@@ -8,11 +8,11 @@
 extern crate lazy_static;
 
 mod group;
-use group::*;
+use group::ADMIN_GROUP;
 mod handler;
 use handler::Handler;
 mod module;
-use module::help::*;
+use module::help::HELP;
 
 use serenity::client::Client;
 use serenity::framework::standard::StandardFramework;

@@ -1,5 +1,5 @@
 use serenity::framework::standard::macros::group;
-use crate::module::purge::*;
+use crate::module::purge::PURGE_COMMAND;
 
 #[group]
 #[commands(purge)]
