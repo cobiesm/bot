@@ -7,7 +7,6 @@ use serenity::framework::standard::{
 };
 
 #[command]
-pub(crate) fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
     let signed = *numbers(msg).first().ok_or("Sayı girmen lazım alooo???")?;
 
     #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
@@ -15,6 +14,7 @@ pub(crate) fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
         signed.floor() as u64
     } else {
         return Err(CommandError("Bozuk sayı girdin arkadaşım.".into()));
+pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
     };
 
     msg.channel_id.broadcast_typing(&ctx).ok();

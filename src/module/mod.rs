@@ -1,6 +1,7 @@
-pub(crate) mod purge;
-pub(crate) mod help;
-pub(crate) mod blacklink;
-pub(crate) mod badword;
-pub(crate) mod selfmod;
-pub(crate) mod slowmode;
+pub mod purge;
+pub mod help;
+pub mod blacklink;
+pub mod badword;
+pub mod selfmod;
+pub mod slowmode;
+pub mod presence;

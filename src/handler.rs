@@ -6,7 +6,7 @@ use crate::module::badword;
 use crate::module::selfmod;
 use crate::module::slowmode;
 
-pub(crate) struct Handler;
+pub struct Handler;
 
 impl EventHandler for Handler {
     fn message(&self, ctx: Context, new_message: Message) {

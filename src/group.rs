@@ -5,4 +5,4 @@ use crate::module::purge::*;
 #[commands(purge)]
 #[allowed_roles("🔑")]
 #[only_in(guilds)]
-pub(crate) struct Admin;
+pub struct Admin;
