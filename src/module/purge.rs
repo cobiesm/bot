@@ -3,18 +3,19 @@ use serenity::prelude::Context;
 use serenity::framework::standard::{
     CommandResult,
     CommandError,
-    macros::command
+    macros::command,
+    Args,
+    Delimiter,
 };
 
 #[command]
-    let signed = *numbers(msg).first().ok_or("Sayı girmen lazım alooo???")?;
-
-    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let amount: u64 = if signed.is_sign_positive() && signed < u64::max_value() as f64 {
-        signed.floor() as u64
-    } else {
-        return Err(CommandError("Bozuk sayı girdin arkadaşım.".into()));
+#[only_in(guilds)]
+#[num_args(1)]
 pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
+    let amount = match args.single::<u64>() {
+        Ok(num) => num,
+        Err(_) => { return Err(CommandError("Bozuk sayı girdin arkadaşım.".into())); }
     };
 
     msg.channel_id.broadcast_typing(&ctx).ok();
@@ -28,15 +29,4 @@ pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
     }
 
     Ok(())
-}
-
-fn numbers(msg: &Message) -> Vec<f64> {
-    let it = msg.content.split_whitespace();
-    let mut numbers: Vec<f64> = Vec::new();
-    for slice in it {
-        if let Ok(number) = slice.parse::<f64>() {
-            numbers.push(number);
-        }
-    };
-    numbers
 }
