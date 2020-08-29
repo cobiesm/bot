@@ -1,7 +1,7 @@
 use std::error::Error;
 use serenity::client::Context;
 use serenity::model::{
-    channel::{ Reaction, Message, PermissionOverwrite, PermissionOverwriteType, ReactionType },
+    channel::{ Reaction, PermissionOverwrite, PermissionOverwriteType, ReactionType },
     guild::Member,
     permissions::Permissions,
     id::UserId,
@@ -58,68 +58,50 @@ impl Muteable for Member {
 #[allow(clippy::unreadable_literal)]
 pub fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let guild = reaction.guild_id;
-    if guild.is_none() {
+
+    if reaction.emoji != ReactionType::Unicode("👿".into())
+        || reaction.user(ctx).unwrap().bot
+        || guild.is_none()
+    {
         return;
     }
 
-    let guild = guild.unwrap();
-    if guild.to_partial_guild(ctx).unwrap().role_by_name("ACE").is_none() {
+    let guild = guild.unwrap().to_guild_cached(ctx).unwrap().read().clone();
+    let ace = guild.role_by_name("ACE").unwrap().id;
+    let is_ace = reaction.user(ctx).unwrap().has_role(ctx, guild.id, ace).unwrap();
+
+    if guild.role_by_name("ACE").is_none() || !is_ace {
         return;
     }
 
-    let ace = guild.to_partial_guild(ctx).unwrap().role_by_name("ACE").unwrap().id;
+    let online_count = guild.presences.iter().filter(|p| {
+        p.1.status != OnlineStatus::Offline &&
+            !p.0.to_user(ctx).unwrap().bot &&
+            p.0 != &reaction.message(ctx).unwrap().author.id &&
+            guild.member(ctx, p.0).unwrap().roles.iter().any(|role| role == &ace)
+    }).count();
 
-    if reaction.user(ctx).unwrap().bot
-            || reaction.emoji != ReactionType::Unicode("👿".into())
-            || !reaction.user(ctx).unwrap().has_role(ctx, guild, ace).unwrap() {
-
+    if online_count <= 2 || (!is_ace && online_count < 2) {
         return;
     }
 
     reaction.channel_id.broadcast_typing(ctx).ok();
 
-    let online = guild.to_guild_cached(ctx).unwrap().read()
-            .members(ctx, Some(1000), None).unwrap().iter().filter(|member| {
-
-        
-        if let Some(presence) = guild.to_guild_cached(ctx).unwrap().read().
-                presences.get(&member.user_id()) {
-
-            presence.status != OnlineStatus::Offline &&
-                member.roles.iter().any(|role| role == &ace)
-        } else {
-            false
-        }
-    }).count();
-
-    if online < 2 {
-        return;
-    }
-
     let reacters: Vec<User> = reaction.users(ctx, "👿", Some(100), None::<UserId>)
         .unwrap().iter().filter(|user| {
-            user.has_role(ctx, guild, ace).unwrap()
+            user.has_role(ctx, guild.id, ace).unwrap()
         }).cloned().collect();
 
     let is_curse = reacters.iter().any(|user| {
         user.id == ctx.http.get_current_user().unwrap().id
     });
 
-    let is_msg_ace = reaction.user_id.to_user_cached(ctx).unwrap().read()
-        .has_role(ctx, guild, ace).unwrap();
+    let unwanted_curse = is_curse
+        && reacters.len() as f32 >= (online_count as f32 / 2.4).round();
 
-    let unwanted_curse = is_curse && reacters.len() as f32 >= online as f32 / 2.4;
+    let unwanted_noncurse = reacters.len() == online_count;
 
-    let noncurse_rate = (online - 1) as f32 / 1.2;
-    let unwanted_normal = reacters.len() as f32 >= noncurse_rate;
-    let unwanted_ace = is_msg_ace && reacters.len() as f32 >= noncurse_rate;
-
-    if unwanted_curse || (online >= 5 && (unwanted_normal || unwanted_ace)) {
-        punish(ctx, reaction.message(ctx).unwrap());
+    if unwanted_curse || (online_count >= 3 && unwanted_noncurse) {
+        reaction.message(ctx).unwrap().delete(ctx).unwrap();
     }
-}
-
-pub fn punish<T: Into<Message>>(ctx: &Context, msg: T) {
-    let msg = msg.into();
-    msg.delete(ctx).ok();
 }
