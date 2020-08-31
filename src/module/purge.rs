@@ -13,7 +13,7 @@ use serenity::framework::standard::{
 #[num_args(1)]
 pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
     let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
-    let amount = match args.single::<u64>() {
+    let amount = match args.advance().single::<u64>() {
         Ok(num) => num,
         Err(_) => { return Err(CommandError("Bozuk sayı girdin arkadaşım.".into())); }
     };
