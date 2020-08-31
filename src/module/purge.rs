@@ -15,7 +15,7 @@ pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
     let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
     let amount = match args.advance().single::<u64>() {
         Ok(num) => num,
-        Err(_) => { return Err(CommandError("Bozuk sayı girdin arkadaşım.".into())); }
+        Err(_) => { return Err(CommandError("Girdiğiniz sayı geri verildi.".into())); }
     };
 
     msg.channel_id.broadcast_typing(&ctx).ok();
