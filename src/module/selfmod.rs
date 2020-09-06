@@ -57,43 +57,49 @@ impl Muteable for Member {
 
 #[allow(clippy::unreadable_literal)]
 pub fn reaction_add(ctx: &Context, reaction: &Reaction) {
-    let guild = reaction.guild_id;
+    let user = match reaction.user(ctx) {
+        Ok(u) => u,
+        Err(_) => { return; }
+    };
 
-    if reaction.emoji != ReactionType::Unicode("👿".into())
-        || reaction.user(ctx).unwrap().bot
-        || guild.is_none()
-    {
+    if reaction.emoji != ReactionType::Unicode("👿".into()) || user.bot {
         return;
     }
 
-    let guild = guild.unwrap().to_guild_cached(ctx).unwrap().read().clone();
-    let ace = guild.role_by_name("ACE").unwrap().id;
-    let is_ace = reaction.user(ctx).unwrap().has_role(ctx, guild.id, ace).unwrap();
+    let guild = match reaction.guild_id {
+        Some(g) => g.to_guild_cached(ctx).unwrap().read().clone(),
+        None => { return; }
+    };
 
-    if guild.role_by_name("ACE").is_none() || !is_ace {
-        return;
-    }
+    let ace = match guild.role_by_name("ACE") {
+        Some(r) => r.id,
+        None => { return; }
+    };
+
+    let is_ace = match user.has_role(ctx, guild.id, ace) {
+        Ok(r) => r,
+        Err(e) => { println!("{}", e); return; } // TODO: Error printing could be nicer
+    };
 
     let online_count = guild.presences.iter().filter(|p| {
-        p.1.status != OnlineStatus::Offline &&
-            !p.0.to_user(ctx).unwrap().bot &&
-            p.0 != &reaction.message(ctx).unwrap().author.id &&
-            guild.member(ctx, p.0).unwrap().roles.iter().any(|role| role == &ace)
+        p.1.status != OnlineStatus::Offline
+            && !p.0.to_user(ctx).unwrap().bot
+            && guild.member(ctx, p.0).unwrap().roles.iter().any(|role| role == &ace)
     }).count();
 
-    if online_count <= 2 || (!is_ace && online_count < 2) {
+    if (online_count <= 2 && is_ace) || online_count < 2 {
         return;
     }
 
     reaction.channel_id.broadcast_typing(ctx).ok();
 
     let reacters: Vec<User> = reaction.users(ctx, "👿", Some(100), None::<UserId>)
-        .unwrap().iter().filter(|user| {
-            user.has_role(ctx, guild.id, ace).unwrap()
+        .unwrap().iter().filter(|u| {
+            u.has_role(ctx, guild.id, ace).unwrap()
         }).cloned().collect();
 
-    let is_curse = reacters.iter().any(|user| {
-        user.id == ctx.http.get_current_user().unwrap().id
+    let is_curse = reacters.iter().any(|u| {
+        u.id == ctx.http.get_current_user().unwrap().id
     });
 
     let unwanted_curse = is_curse
