@@ -44,10 +44,5 @@ fn main() {
 }
 
 fn react_ok(ctx: &Context, msg: &Message) {
-    match msg.react(ctx, "🤘") {
-        Ok(_) => (),
-        Err(err) => {
-            msg.reply(ctx, err.to_string()).ok();
-        }
-    };
+    msg.react(ctx, "🤘").ok();
 }
