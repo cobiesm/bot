@@ -8,7 +8,7 @@
 extern crate lazy_static;
 
 mod group;
-use group::ADMIN_GROUP;
+use group::{ ADMIN_GROUP, FUN_GROUP };
 mod handler;
 use handler::Handler;
 mod module;
@@ -36,7 +36,7 @@ fn main() {
             msg.reply(ctx, format!("{:?}", err)).ok();
         })
         .help(&HELP)
-        .group(&ADMIN_GROUP));
+        .group(&ADMIN_GROUP).group(&FUN_GROUP));
 
     if let Err(err) = client.start() {
         println!("Başlangıç sırasında bir hata ile karşılaşıldı: {:?}", err);
