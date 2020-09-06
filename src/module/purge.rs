@@ -20,13 +20,15 @@ pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     msg.channel_id.broadcast_typing(&ctx).ok();
 
-    let messages = msg.channel_id.messages(&ctx, |builder| {
-        builder.before(msg.id).limit(amount)
+    let mut messages = msg.channel_id.messages(&ctx, |builder| {
+        let builder = builder.before(msg.id);
+        if amount <= 100 {
+            builder.limit(amount)
+        } else {
+            builder.after(amount)
+        }
     })?;
 
-    for message in messages {
-        message.delete(&ctx)?;
-    }
-
-    Ok(())
+    messages.remove(messages.len());
+    msg.channel_id.delete_messages(&ctx, messages).map_err(|e| { CommandError::from(e) })
 }
