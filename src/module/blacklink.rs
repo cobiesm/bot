@@ -11,8 +11,21 @@ lazy_static! {
 }
 
 pub fn message(ctx: &Context, msg: &Message) {
-    if msg.guild_id.is_some() && !msg.author.bot && MATCHER.is_match(&msg.content) {
-        msg.reply(ctx, "Bu linki paylaşamazsın.").ok();
+    let captures = MATCHER.captures(&msg.content);
+    if msg.guild_id.is_some() && !msg.author.bot && captures.is_some() {
+        let mut domain = captures.unwrap().get(1).unwrap().as_str().to_owned();
+        domain.replace_range(
+            ..1,
+            &domain.chars().next().unwrap().to_uppercase().collect::<String>()
+        );
+
+        msg.reply(
+            ctx,
+            format!(
+                "Neden {} linki paylaşıyorsun ki?",
+                domain
+            )
+        ).ok();
         msg.author.dm(ctx, |pm| {
             pm.content(&msg.content)
         }).ok();
