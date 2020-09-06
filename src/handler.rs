@@ -2,7 +2,8 @@ use serenity::client::Context;
 use serenity::model::channel::{ Message, Reaction };
 use serenity::model::gateway::Ready;
 use serenity::prelude::EventHandler;
-use crate::module::{ badword, blacklink, presence, selfmod, slowmode, startup_message };
+use crate::module::{ badword, blacklink, presence, selfmod, slowmode, startup_message,
+                     faq };
 
 pub struct Handler;
 
@@ -11,6 +12,7 @@ impl EventHandler for Handler {
         blacklink::message(&ctx, &new_message);
         badword::message(&ctx, &new_message);
         slowmode::message(&ctx, &new_message);
+        faq::message(&ctx, &new_message);
     }
 
     fn reaction_add(&self, ctx: Context, reaction: Reaction) {

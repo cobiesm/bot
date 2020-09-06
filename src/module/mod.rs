@@ -7,3 +7,4 @@ pub mod slowmode;
 pub mod presence;
 pub mod startup_message;
 pub mod yarra;
+pub mod faq;
