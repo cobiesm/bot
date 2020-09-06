@@ -29,6 +29,6 @@ pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
     })?;
 
-    messages.remove(messages.len());
+    messages.remove(messages.len() - 1);
     msg.channel_id.delete_messages(&ctx, messages).map_err(|e| { CommandError::from(e) })
 }
