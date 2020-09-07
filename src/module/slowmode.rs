@@ -3,7 +3,9 @@ use serenity::model::channel::Message;
 use serenity::prelude::Context;
 
 pub fn message(ctx: &Context, msg: &Message) {
-    if msg.guild_id.is_none() || !msg.member.as_ref().expect("member").roles.is_empty() {
+    if msg.guild_id.is_none() || msg.author.bot
+        || !msg.member.as_ref().expect("member").roles.is_empty()
+    {
         return;
     }
 
