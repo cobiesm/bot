@@ -38,6 +38,7 @@ fn main() {
         .help(&HELP)
         .group(&ADMIN_GROUP).group(&FUN_GROUP));
 
+    client.cache_and_http.cache.write().settings_mut().max_messages(1000);
     if let Err(err) = client.start() {
         println!("Başlangıç sırasında bir hata ile karşılaşıldı: {:?}", err);
     }
