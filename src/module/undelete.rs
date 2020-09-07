@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use serenity::http::AttachmentType;
 use serenity::client::Context;
 use serenity::model::id::{ ChannelId, MessageId };
@@ -8,7 +9,12 @@ pub fn message_delete(ctx: &Context, channel_id: &ChannelId, message_id: &Messag
         None => { return }
     };
 
-    if old_message.author.bot || old_message.is_private() {
+    let tc = &Utc::now();
+    let tm = message_id.created_at();
+    if old_message.author.bot
+        || tc.timestamp_millis() - tm.timestamp_millis() < 1500
+        || old_message.is_private()
+    {
         return
     }
 
