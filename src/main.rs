@@ -32,9 +32,6 @@ fn main() {
                 Err(err) => { msg.reply(ctx, err.0).ok(); } // CommandErrors as reply
             }
         })
-        .on_dispatch_error(|ctx, msg, err| {
-            msg.reply(ctx, format!("{:?}", err)).ok();
-        })
         .help(&HELP)
         .group(&ADMIN_GROUP).group(&FUN_GROUP));
 
