@@ -3,6 +3,16 @@ use serenity::http::AttachmentType;
 use serenity::client::Context;
 use serenity::model::id::{ ChannelId, MessageId };
 
+lazy_static!(
+    static ref BLACKLIST: Vec<u64> = vec![
+        589470920146550794,
+        589445261546487808,
+        589470445989003270,
+        589472041770549249,
+        655552145667653654,
+    ];
+);
+
 pub fn message_delete(ctx: &Context, channel_id: &ChannelId, message_id: &MessageId) {
     let old_message = match ctx.cache.read().message(channel_id, message_id) {
         Some(m) => m,
@@ -14,6 +24,7 @@ pub fn message_delete(ctx: &Context, channel_id: &ChannelId, message_id: &Messag
     if old_message.author.bot
         || tc.timestamp_millis() - tm.timestamp_millis() < 1500
         || old_message.is_private()
+        || BLACKLIST.contains(channel_id.as_u64())
     {
         return
     }
