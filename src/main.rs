@@ -8,7 +8,7 @@
 extern crate lazy_static;
 
 mod group;
-use group::{ ADMIN_GROUP, FUN_GROUP };
+use group::{ ADMIN_GROUP, FUN_GROUP, ACE_GROUP };
 mod handler;
 use handler::Handler;
 mod module;
