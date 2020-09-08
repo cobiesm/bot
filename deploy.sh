@@ -1,6 +1,5 @@
 #!/bin/bash
-docker build -t hwbot .
-docker run --rm -v /$(pwd)/deploy/bin:/output hwbot:latest
+docker run --rm -v /$(pwd)/deploy/bin:/output -v bottarget:/target hwbot:latest
 
 cd deploy
 sudo chown menfie:menfie bin/hello_worlds-bot

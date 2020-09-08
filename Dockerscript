@@ -1,3 +1,4 @@
 #!/bin/bash
-cargo build --release &&
-mv target/release/hello_worlds-bot /output
+cargo build --release --target-dir /target
+cd /target
+mv release/hello_worlds-bot /output

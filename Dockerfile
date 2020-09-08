@@ -1,7 +1,10 @@
 FROM rust:1.46-slim-buster
 
+VOLUME [ "/build" ]
+VOLUME [ "/output" ]
+VOLUME [ "/target" ]
+
 WORKDIR /build
 COPY . .
 
-VOLUME [ "/output" ]
 ENTRYPOINT [ "/bin/sh", "Dockerscript" ]
