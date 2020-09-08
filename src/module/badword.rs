@@ -1,6 +1,6 @@
 use regex::Regex;
 use serenity::client::Context;
-use serenity::model::channel::Message;
+use serenity::model::channel::{ Message, ReactionType };
 
 lazy_static! {
     static ref MATCHER: Regex = Regex::new(
@@ -12,8 +12,8 @@ lazy_static! {
     ).unwrap();
 }
 
-pub fn message(ctx: &Context, msg: &Message) {
+pub async fn message(ctx: &Context, msg: &Message) {
     if msg.guild_id.is_some() && !msg.author.bot && MATCHER.is_match(&msg.content) {
-        msg.react(ctx, "👿").ok(); // imp
+        msg.react(ctx, ReactionType::Unicode("👿".into())).await.ok(); // imp
     }
 }

@@ -24,16 +24,16 @@ struct Faq {
     mentions: bool,
 }
 
-pub fn message(ctx: &Context, new_message: &Message) {
+pub async fn message(ctx: &Context, new_message: &Message) {
     if new_message.author.bot {
         return
     }
 
     for faq in FAQS.iter() {
         if faq.expected.is_match(&new_message.content) && (!faq.mentions
-            || new_message.mentions_user(&ctx.http.get_current_user().unwrap().into()))
+            || new_message.mentions_user(&ctx.http.get_current_user().await.unwrap().into()))
         {
-            new_message.reply(ctx, &faq.outcome).ok();
+            new_message.reply(ctx, &faq.outcome).await.ok();
         }
     }
 }

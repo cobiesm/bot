@@ -2,10 +2,10 @@ use chrono::prelude::*;
 use serenity::client::Context;
 use serenity::utils::Colour;
 
-pub fn ready(ctx: &Context) {
+pub async fn ready(ctx: &Context) {
     #[allow(clippy::unreadable_literal)]
-    let dm = ctx.http.get_user(124226104931254276).expect("ADMIN is missing!")
-        .create_dm_channel(&ctx).unwrap();
+    let dm = ctx.http.get_user(124226104931254276).await.expect("ADMIN is missing!")
+        .create_dm_channel(&ctx).await.unwrap();
     #[deny(clippy::unreadable_literal)]
 
     dm.send_message(&ctx, |m| {
@@ -16,6 +16,6 @@ pub fn ready(ctx: &Context) {
                     f.text("Heroku'nun amına koyim bu downtime ne ya!?")
                 })
         })
-    }).ok();
+    }).await.ok();
 }
 

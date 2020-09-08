@@ -11,14 +11,14 @@ use serenity::framework::standard::{
 #[command]
 #[only_in(guilds)]
 #[num_args(1)]
-pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
+pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
     let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
     let amount = match args.advance().single::<u64>() {
         Ok(num) => num,
-        Err(_) => { return Err(CommandError("Girdiğiniz sayı geri verildi.".into())); }
+        Err(_) => { return Err(CommandError::from("Girdiğiniz sayı geri verildi.")); }
     };
 
-    msg.channel_id.broadcast_typing(&ctx).ok();
+    msg.channel_id.broadcast_typing(&ctx).await.ok();
 
     let with_id = amount > 100;
     let mut messages = msg.channel_id.messages(&ctx, |builder| {
@@ -28,11 +28,12 @@ pub fn purge(ctx: &mut Context, msg: &Message) -> CommandResult {
         } else {
             builder.limit(amount)
         }
-    })?;
+    }).await?;
 
     if with_id {
         messages.remove(0);
     }
 
-    msg.channel_id.delete_messages(&ctx, messages).map_err(|e| { CommandError::from(e) })
+    msg.channel_id.delete_messages(&ctx, messages).await
+        .map_err(|e| { CommandError::from(e) })
 }

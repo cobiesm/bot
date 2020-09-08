@@ -10,7 +10,7 @@ lazy_static! {
     ).unwrap();
 }
 
-pub fn message(ctx: &Context, msg: &Message) {
+pub async fn message(ctx: &Context, msg: &Message) {
     let captures = MATCHER.captures(&msg.content);
     if msg.guild_id.is_some() && !msg.author.bot && captures.is_some() {
         let mut domain = captures.unwrap().get(1).unwrap().as_str().to_owned();
@@ -25,10 +25,10 @@ pub fn message(ctx: &Context, msg: &Message) {
                 "Neden {} linki paylaşıyorsun ki?",
                 domain
             )
-        ).ok();
+        ).await.ok();
         msg.author.dm(ctx, |pm| {
             pm.content(&msg.content)
-        }).ok();
-        msg.delete(ctx).unwrap();
+        }).await.ok();
+        msg.delete(ctx).await.unwrap();
     }
 }

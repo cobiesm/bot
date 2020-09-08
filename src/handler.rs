@@ -1,3 +1,4 @@
+use serenity::async_trait;
 use serenity::client::Context;
 use serenity::model::channel::{ Message, Reaction };
 use serenity::model::id::{ ChannelId, MessageId };
@@ -8,26 +9,27 @@ use crate::module::{ badword, blacklink, presence, selfmod, slowmode, startup_me
 
 pub struct Handler;
 
+#[async_trait]
 impl EventHandler for Handler {
-    fn message(&self, ctx: Context, new_message: Message) {
-        blacklink::message(&ctx, &new_message);
-        badword::message(&ctx, &new_message);
-        slowmode::message(&ctx, &new_message);
-        faq::message(&ctx, &new_message);
+    async fn message(&self, ctx: Context, new_message: Message) {
+        blacklink::message(&ctx, &new_message).await;
+        badword::message(&ctx, &new_message).await;
+        slowmode::message(&ctx, &new_message).await;
+        faq::message(&ctx, &new_message).await;
     }
 
-    fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-        selfmod::reaction_add(&ctx, &reaction);
+    async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
+        selfmod::reaction_add(&ctx, &reaction).await;
     }
 
-    fn ready(&self, ctx: Context, _data_about_bot: Ready) {
-        presence::ready(&ctx);
-        startup_message::ready(&ctx);
+    async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
+        presence::ready(&ctx).await;
+        startup_message::ready(&ctx).await;
     }
 
-    fn message_delete(&self, ctx: Context,
+    async fn message_delete(&self, ctx: Context,
                       channel_id: ChannelId, message_id: MessageId)
     {
-        undelete::message_delete(&ctx, &channel_id, &message_id);
+        undelete::message_delete(&ctx, &channel_id, &message_id).await;
     }
 }

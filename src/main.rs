@@ -14,33 +14,39 @@ use handler::Handler;
 mod module;
 use module::help::HELP;
 
-use serenity::client::Client;
-use serenity::framework::standard::StandardFramework;
-use serenity::model::channel::Message;
-use serenity::prelude::Context;
 use std::env;
+use serenity::client::Client;
+use serenity::framework::StandardFramework;
+use serenity::framework::standard::CommandError;
+use serenity::framework::standard::macros::hook;
+use serenity::model::channel::{ Message, ReactionType };
+use serenity::prelude::Context;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut client = Client::new(
-        &env::var("ROBOTOKEN").expect("token"), Handler
-    ).expect("Girilen token, token değil.");
-    client.with_framework(StandardFramework::new()
-        .configure(|c| c.prefix("."))
-        .after(|ctx, msg, _, res| {
-            match res {
-                Ok(()) => { react_ok(ctx, msg); }, // react to ok
-                Err(err) => { msg.reply(ctx, err.0).ok(); } // CommandErrors as reply
-            }
-        })
-        .help(&HELP)
-        .group(&ADMIN_GROUP).group(&FUN_GROUP));
+        &env::var("ROBOTOKEN").expect("token")
+    ).event_handler(Handler).framework(
+        StandardFramework::new().configure(|c| c.prefix("."))
+        .after(after_hook).help(&HELP).group(&ADMIN_GROUP).group(&FUN_GROUP)
+    ).await.expect("Girilen token, token değil.");
 
-    client.cache_and_http.cache.write().settings_mut().max_messages(1000);
-    if let Err(err) = client.start() {
+    client.cache_and_http.cache.set_max_messages(1000).await;
+    if let Err(err) = client.start().await {
         println!("Başlangıç sırasında bir hata ile karşılaşıldı: {:?}", err);
     }
 }
 
-fn react_ok(ctx: &Context, msg: &Message) {
-    msg.react(ctx, "🤘").ok();
+#[hook]
+async fn after_hook(ctx: &Context, msg: &Message, _: &str, error: Result<(), CommandError>) {
+    if let Err(e) = error {
+        msg.reply(ctx, e).await.ok();
+    } else {
+        react_ok(ctx, msg).await;
+    }
+}
+
+
+async fn react_ok(ctx: &Context, msg: &Message) {
+    msg.react(ctx, ReactionType::Unicode("🤘".into())).await.ok();
 }
