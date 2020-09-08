@@ -5,6 +5,5 @@ VOLUME [ "/output" ]
 VOLUME [ "/target" ]
 
 WORKDIR /build
-COPY . .
 
 ENTRYPOINT [ "/bin/sh", "Dockerscript" ]
