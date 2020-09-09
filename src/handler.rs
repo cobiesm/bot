@@ -32,6 +32,5 @@ impl EventHandler for Handler {
                       channel_id: ChannelId, message_id: MessageId)
     {
         undelete::message_delete(&ctx, channel_id, message_id).await;
-        undelete::message_delete(&ctx, channel_id, message_id).await;
     }
 }
