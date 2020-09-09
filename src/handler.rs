@@ -30,6 +30,7 @@ impl EventHandler for Handler {
     async fn message_delete(&self, ctx: Context,
                       channel_id: ChannelId, message_id: MessageId)
     {
-        undelete::message_delete(&ctx, &channel_id, &message_id).await;
+        undelete::message_delete(&ctx, channel_id, message_id).await;
+        undelete::message_delete(&ctx, channel_id, message_id).await;
     }
 }

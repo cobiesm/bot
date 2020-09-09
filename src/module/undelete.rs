@@ -14,7 +14,7 @@ lazy_static!(
     ];
 );
 
-pub async fn message_delete(ctx: &Context, channel_id: &ChannelId, message_id: &MessageId) {
+pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message_id: MessageId) {
     let old_message = match ctx.cache.message(channel_id, message_id).await {
         Some(m) => m,
         None => { return }
