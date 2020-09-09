@@ -29,6 +29,7 @@ async fn main() {
     ).event_handler(Handler).framework(
         StandardFramework::new().configure(|c| c.prefix("."))
         .after(after_hook).help(&HELP).group(&ADMIN_GROUP).group(&FUN_GROUP)
+        .group(&ACE_GROUP)
     ).await.expect("Girilen token, token değil.");
 
     client.cache_and_http.cache.set_max_messages(1000).await;
