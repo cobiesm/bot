@@ -10,6 +10,8 @@ use serenity::framework::standard::{
 #[command]
 #[only_in(guilds)]
 #[max_args(1)]
+#[description = "yArra"]
+#[example = "<@menfie>"]
 pub async fn yarra(ctx: &Context, msg: &Message) -> CommandResult {
     if let Err(e) = msg.channel_id.send_message(&ctx, |m| {
         m.embed(|em| {

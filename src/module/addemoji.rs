@@ -19,6 +19,9 @@ static ERR_SMNAME: &str = "hafız az daha uzun isim girebilicen mi.";
 #[command]
 #[only_in(guilds)]
 #[num_args(2)]
+#[description = "Emoji eklemek belki."]
+#[example = "yarra https://yarra.me/yarra.gif"]
+#[aliases(emoji,emojiekle)]
 pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
     let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
     let name = match args.advance().single::<String>() {
