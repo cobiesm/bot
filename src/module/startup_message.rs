@@ -3,7 +3,6 @@ use serenity::client::Context;
 use serenity::utils::Colour;
 
 pub async fn ready(ctx: &Context) {
-    #[allow(clippy::unreadable_literal)]
     let dm = ctx.http.get_user(124226104931254276).await.expect("ADMIN is missing!")
         .create_dm_channel(&ctx).await.unwrap();
     #[deny(clippy::unreadable_literal)]

@@ -59,7 +59,6 @@ impl Muteable for Member {
     }
 }
 
-#[allow(clippy::unreadable_literal)]
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let user = match reaction.user(ctx).await {
         Ok(u) => u,
