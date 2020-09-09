@@ -7,4 +7,6 @@ VOLUME [ "/usr/local/cargo" ]
 
 WORKDIR /build
 
+RUN apt-get update && apt-get install -y --no-install-recommends libssl-dev pkg-config
+
 ENTRYPOINT [ "/bin/sh", "Dockerscript" ]
