@@ -6,7 +6,7 @@ lazy_static! {
     static ref MATCHER: Regex = Regex::new(
         r"(?ix)
         (\s|^)(yar+ak | kansız | amı\s | ibi?ne) |
-        sik(ik|ti|er|ko|di) | or+os+pu | piç | ana*skm | yobaz | çomar | kancık | amcık |
+        ^sik(ik|ti|er|ko|di) | or+os+pu | piç | ana*skm | yobaz | çomar | kancık | amcık |
         yavşak | göt\s?veren
         "
     ).unwrap();
