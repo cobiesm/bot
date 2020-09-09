@@ -5,7 +5,7 @@ use serenity::model::id::{ ChannelId, MessageId };
 use serenity::model::gateway::Ready;
 use serenity::prelude::EventHandler;
 use crate::module::{ badword, blacklink, presence, selfmod, slowmode, startup_message,
-                     faq, undelete };
+                     faq, undelete, clap };
 
 pub struct Handler;
 
@@ -20,6 +20,7 @@ impl EventHandler for Handler {
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
         selfmod::reaction_add(&ctx, &reaction).await;
+        clap::reaction_add(&ctx, &reaction).await;
     }
 
     async fn ready(&self, ctx: Context, _data_about_bot: Ready) {

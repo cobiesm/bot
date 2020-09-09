@@ -10,3 +10,4 @@ pub mod yarra;
 pub mod faq;
 pub mod undelete;
 pub mod addemoji;
+pub mod clap;
