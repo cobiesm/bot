@@ -23,8 +23,8 @@ pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
     let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
     let name = match args.advance().single::<String>() {
         Ok(name) if name.len() > 1 => name,
+        Ok(_) => { return Err(ERR_SMNAME.into()) },
         Err(e) => { return Err(CommandError::from(e)) },
-        _ => { return Err(ERR_SMNAME.into()) }
     };
 
     let image_url = match args.single::<String>() {
@@ -35,8 +35,8 @@ pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
     let image_raw = match reqwest::get(&image_url).await {
         Ok(resp) =>  match resp.bytes().await {
             Ok(bytes) if bytes.len() <= 255_999 => bytes,
+            Ok(_) => { return Err(ERR_BIG.into()) },
             Err(_) => { return Err(CommandError::from(ERR_EMPTY)) }
-            _ => { return Err(ERR_BIG.into()) }
         },
         Err(_) => { return Err(CommandError::from(ERR_INVLINK)) }
     };
