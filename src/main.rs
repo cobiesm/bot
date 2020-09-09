@@ -30,6 +30,8 @@ async fn main() {
         &env::var("ROBOTOKEN").expect("token")
     ).event_handler(Handler).framework(
         StandardFramework::new().configure(|c| c.prefix("."))
+        .bucket("addemoji", |buc| buc.delay(43200)).await
+        .bucket("fun", |buc| buc.delay(10)).await
         .after(after_hook).help(&HELP).group(&ADMIN_GROUP).group(&FUN_GROUP)
         .group(&ACE_GROUP)
     ).await.expect("Girilen token, token değil.");

@@ -12,6 +12,7 @@ use serenity::framework::standard::{
 #[max_args(1)]
 #[description = "yArra"]
 #[example = "<@menfie>"]
+#[bucket = "fun"]
 pub async fn yarra(ctx: &Context, msg: &Message) -> CommandResult {
     if let Err(e) = msg.channel_id.send_message(&ctx, |m| {
         m.embed(|em| {
