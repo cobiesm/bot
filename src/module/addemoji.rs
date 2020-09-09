@@ -34,7 +34,7 @@ pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
 
     let image_raw = match reqwest::get(&image_url).await {
         Ok(resp) =>  match resp.bytes().await {
-            Ok(bytes) if bytes.len() <= 255999 => bytes,
+            Ok(bytes) if bytes.len() <= 255_999 => bytes,
             Err(_) => { return Err(CommandError::from(ERR_EMPTY)) }
             _ => { return Err(ERR_BIG.into()) }
         },
