@@ -8,6 +8,12 @@ const Q_CHANNELID: u64 = 670984869941346304;
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let message = reaction.message(ctx).await.unwrap();
+
+    if reaction.user_id.unwrap() == message.author.id {
+        reaction.delete(ctx).await.ok();
+        return;
+    }
+
     let reactions = calc_reactions(ctx, &message).await;
 
     if reactions <= 4 {
@@ -47,10 +53,6 @@ async fn calc_reactions(http: impl AsRef<Http>, message: &Message) -> usize {
     let reactions = message.reaction_users(
         &http, ReactionType::Unicode("👏".into()), None, None
     ).await.unwrap();
-
-    let reactions = reactions.iter().filter(|r| {
-        r.id != message.author.id
-    }).collect::<Vec<_>>();
 
     reactions.len()
 }
