@@ -36,7 +36,7 @@ pub async fn uwu(ctx: &Context, msg: &Message) -> CommandResult {
     };
 
     if !UWUWIZER.is_match(&text) {
-        return Err("Uwuwanacak bişi buwamadım.".into());
+        return Err("uwuwanacak bişi buwamadım.".into());
     }
 
     UWUWIZER.find_iter(&text.clone()).for_each(|m| {
