@@ -1,6 +1,6 @@
 use std::thread::sleep;
-use std::time::Duration;
 use std::collections::HashMap;
+use chrono::prelude::*;
 use tokio::sync::Mutex;
 use serenity::http::Http;
 use serenity::client::Context;
@@ -14,8 +14,11 @@ lazy_static!(
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let message = reaction.message(ctx).await.unwrap();
+    let duration = Utc::now() - message.timestamp;
 
-    if reaction.user_id.unwrap() == message.author.id {
+    if reaction.user_id.unwrap() == message.author.id
+        || duration > chrono::Duration::minutes(20)
+    {
         reaction.delete(ctx).await.ok();
         return;
     }
@@ -39,7 +42,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     tokio::spawn(async move {
         let mut tasks = TASKS.lock().await;
         tasks.insert(*message.id.as_u64(), true);
-        sleep(Duration::from_secs(1200));
+        sleep((chrono::Duration::minutes(20) - duration).to_std().unwrap());
         let reactions = calc_reactions(&http, &message).await;
 
         let channel = http.get_channel(Q_CHANNELID).await.unwrap()
