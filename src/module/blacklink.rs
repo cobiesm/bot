@@ -22,7 +22,7 @@ pub async fn message(ctx: &Context, msg: &Message) {
         msg.reply(
             ctx,
             format!(
-                "Neden {} linki paylaşıyorsun ki?",
+                "neden {} linki paylaşıyorsun ki?",
                 domain
             )
         ).await.ok();
