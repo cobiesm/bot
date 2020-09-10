@@ -17,7 +17,6 @@ static ERR_NOTSUP: &str = "png ve gif dışındakiler tarzım değil.";
 static ERR_SMNAME: &str = "hafız az daha uzun isim girebilicen mi.";
 
 #[command]
-#[only_in(guilds)]
 #[num_args(2)]
 #[description = "Emoji eklemek belki."]
 #[example = "yarra https://yarra.me/yarra.gif"]

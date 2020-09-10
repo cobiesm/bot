@@ -14,7 +14,6 @@ lazy_static! {
 }
 
 #[command]
-#[only_in(guilds)]
 #[max_args(1)]
 #[description = "Uwuwuwu."]
 #[example = "uwu <id>"]

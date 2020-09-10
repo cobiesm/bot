@@ -9,7 +9,6 @@ use serenity::framework::standard::{
 };
 
 #[command]
-#[only_in(guilds)]
 #[num_args(1)]
 pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
     let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);

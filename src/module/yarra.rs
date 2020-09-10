@@ -8,7 +8,6 @@ use serenity::framework::standard::{
 };
 
 #[command]
-#[only_in(guilds)]
 #[max_args(1)]
 #[description = "yArra"]
 #[example = "<@menfie>"]
