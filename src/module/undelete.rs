@@ -32,9 +32,10 @@ pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message_id: Me
 
     let hook = ctx.http.as_ref().get_webhook(752309480812969996).await.unwrap();
     let channel_name = old_message.channel_id.name(&ctx).await.unwrap();
+    let content = old_message.content_safe(ctx).await;
 
     hook.execute(&ctx, false, |w| {
-        w.content(&old_message.content)
+        w.content(content)
             .username(format!("{}@{}", &old_message.author.name, channel_name))
             .avatar_url(old_message.author.avatar_url().unwrap())
     }).await.ok();
