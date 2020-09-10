@@ -11,3 +11,4 @@ pub mod faq;
 pub mod undelete;
 pub mod addemoji;
 pub mod clap;
+pub mod uwu;
