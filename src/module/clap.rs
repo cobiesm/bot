@@ -1,10 +1,16 @@
 use std::thread::sleep;
 use std::time::Duration;
+use std::collections::HashMap;
+use tokio::sync::Mutex;
 use serenity::http::Http;
 use serenity::client::Context;
 use serenity::model::channel::{ Reaction, ReactionType, Message };
 
-const Q_CHANNELID: u64 = 670984869941346304;
+static Q_CHANNELID: u64 = 670984869941346304;
+
+lazy_static!(
+    static ref TASKS: Mutex<HashMap<u64, bool>> = Mutex::new(HashMap::new());
+);
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let message = reaction.message(ctx).await.unwrap();
@@ -18,6 +24,12 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
     if reactions <= 4 {
         return;
+    } else if reactions > 5 {
+        for task in TASKS.lock().await.iter() {
+            if task.0 == message.id.as_u64() && *task.1 {
+                return;
+            }
+        }
     }
 
     message.channel_id.broadcast_typing(ctx).await.unwrap();
@@ -25,6 +37,8 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let http = ctx.http.clone();
 
     tokio::spawn(async move {
+        let mut tasks = TASKS.lock().await;
+        tasks.insert(*message.id.as_u64(), true);
         sleep(Duration::from_secs(1200));
         let reactions = calc_reactions(&http, &message).await;
 
@@ -46,13 +60,12 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
                     .footer(|foot| foot.text(format!("{} 👏", reactions)))
             })
         }).await.ok();
+        tasks.insert(*message.id.as_u64(), false);
     });
 }
 
-async fn calc_reactions(http: impl AsRef<Http>, message: &Message) -> usize {
-    let reactions = message.reaction_users(
-        &http, ReactionType::Unicode("👏".into()), None, None
-    ).await.unwrap();
-
-    reactions.len()
+async fn calc_reactions(http: impl AsRef<Http> + Send + Sync, message: &Message) -> usize {
+    message.reaction_users(
+        http, ReactionType::Unicode("👏".into()), None, None
+    ).await.unwrap().len()
 }
