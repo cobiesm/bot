@@ -20,6 +20,7 @@ use std::env;
 use serenity::client::Client;
 use serenity::framework::StandardFramework;
 use serenity::framework::standard::CommandError;
+use serenity::framework::standard::DispatchError;
 use serenity::framework::standard::macros::hook;
 use serenity::model::channel::{ Message, ReactionType };
 use serenity::prelude::Context;
@@ -33,7 +34,7 @@ async fn main() {
         .bucket("addemoji", |buc| buc.delay(43200)).await
         .bucket("fun", |buc| buc.delay(10)).await
         .after(after_hook).help(&HELP).group(&ADMIN_GROUP).group(&FUN_GROUP)
-        .group(&ACE_GROUP)
+        .group(&ACE_GROUP).on_dispatch_error(dispatch_error_hook)
     ).await.expect("Girilen token, token değil.");
 
     client.cache_and_http.cache.set_max_messages(1000).await;
@@ -51,6 +52,10 @@ async fn after_hook(ctx: &Context, msg: &Message, _: &str, error: Result<(), Com
     }
 }
 
+#[hook]
+async fn dispatch_error_hook(_: &Context, _: &Message, error: DispatchError) {
+    println!("{:?}", error);
+}
 
 async fn react_ok(ctx: &Context, msg: &Message) {
     msg.react(ctx, ReactionType::Unicode("🤘".into())).await.ok();
