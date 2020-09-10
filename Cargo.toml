@@ -22,4 +22,5 @@ features = [
     "builder", "cache", "client", "framework", "standard_framework", "model", "utils",
     "absolute_ratelimits", "rustls_backend", "gateway", "http"
 ]
-version = "0.9.0-rc.1"
+git = "https://github.com/serenity-rs/serenity"
+branch = "next"
