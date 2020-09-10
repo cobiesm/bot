@@ -45,8 +45,13 @@ async fn main() {
 
 #[hook]
 async fn after_hook(ctx: &Context, msg: &Message, _: &str, error: Result<(), CommandError>) {
-    if let Err(e) = error {
-        msg.reply(ctx, e).await.ok();
+    if let Err(error) = error {
+        let error = match error.to_string().as_str() {
+            "Unknown Message" => CommandError::from("girdiğin mesajın var olduğundan ve \
+                                                    bu kanalda olduğundan emin misin?"),
+            _ => error
+        };
+        msg.reply(ctx, error).await.ok();
     } else {
         react_ok(ctx, msg).await;
     }
