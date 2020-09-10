@@ -60,5 +60,5 @@ pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
     });
 
     ctx.http.create_emoji(msg.guild_id.unwrap().into(), &emoji).await
-        .map_err(|e| { CommandError::from(e) }).map(|_| ())
+        .map_err(CommandError::from).map(|_| ())
 }

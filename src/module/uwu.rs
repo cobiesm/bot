@@ -49,5 +49,5 @@ pub async fn uwu(ctx: &Context, msg: &Message) -> CommandResult {
 
     channel.send_message(ctx, |m| {
         m.content(text)
-    }).await.map_err(|e| CommandError::from(e)).map(|_| ())
+    }).await.map_err(CommandError::from).map(|_| ())
 }

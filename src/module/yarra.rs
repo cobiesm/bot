@@ -28,5 +28,5 @@ pub async fn yarra(ctx: &Context, msg: &Message) -> CommandResult {
         return Err(CommandError::from(e));
     };
 
-    msg.delete(ctx).await.map_err(|e| { CommandError::from(e) })
+    msg.delete(ctx).await.map_err(CommandError::from)
 }

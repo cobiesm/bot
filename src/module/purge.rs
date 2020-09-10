@@ -34,5 +34,5 @@ pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
     }
 
     msg.channel_id.delete_messages(&ctx, messages).await
-        .map_err(|e| { CommandError::from(e) })
+        .map_err(CommandError::from)
 }
