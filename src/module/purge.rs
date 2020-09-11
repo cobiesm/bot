@@ -1,4 +1,3 @@
-use futures::executor::block_on;
 use serenity::model::channel::Message;
 use serenity::prelude::Context;
 use serenity::framework::standard::{
@@ -20,16 +19,14 @@ pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
 
     msg.channel_id.broadcast_typing(&ctx).await.ok();
 
-    let with_id = amount + 1 > 100;
+    let with_id = msg.channel_id.message(ctx, amount).await.is_ok();
     let messages = msg.channel_id.messages(&ctx, |builder| {
         if with_id {
-            if block_on(msg.channel_id.message(ctx, amount)).is_ok() {
-                builder.after(amount)
-            } else {
-                builder
-            }
-        } else {
+            builder.after(amount)
+        } else if amount < 100 {
             builder.limit(amount + 1)
+        } else {
+            builder
         }
     }).await?;
 
