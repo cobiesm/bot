@@ -26,11 +26,11 @@ pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
         } else if amount < 100 {
             builder.limit(amount + 1)
         } else {
-            builder
+            builder.limit(1)
         }
     }).await?;
 
-    if messages.is_empty() {
+    if messages.len() < 2 {
         Err("yok böyle bi mesaj.".into())
     } else {
         msg.channel_id.delete_messages(&ctx, messages).await
