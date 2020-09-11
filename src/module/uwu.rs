@@ -24,7 +24,7 @@ pub async fn uwu(ctx: &Context, msg: &Message) -> CommandResult {
     let channel = msg.channel(ctx).await.unwrap().guild().unwrap();
     let mut text = match target_id {
         Ok(target_id) => {
-            let target = ctx.http.get_message(msg.channel_id.into(), target_id).await?;
+            let target = msg.channel_id.message(ctx, target_id).await?;
             target.content_safe(ctx).await
         },
         Err(_) => {
