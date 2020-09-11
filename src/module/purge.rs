@@ -1,3 +1,4 @@
+use futures::executor::block_on;
 use serenity::model::channel::Message;
 use serenity::prelude::Context;
 use serenity::framework::standard::{
@@ -14,7 +15,7 @@ pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
     let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
     let amount = match args.advance().single::<u64>() {
         Ok(num) => num,
-        Err(_) => { return Err(CommandError::from("Girdiğiniz sayı geri verildi.")); }
+        Err(_) => { return Err(CommandError::from("girdiğiniz sayı geri verildi.")); }
     };
 
     msg.channel_id.broadcast_typing(&ctx).await.ok();
@@ -32,8 +33,10 @@ pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
         }
     }).await?;
 
+    if messages.is_empty() {
+        Err("yok böyle bi mesaj.".into())
+    } else {
+        msg.channel_id.delete_messages(&ctx, messages).await
+            .map_err(CommandError::from)
     }
-
-    msg.channel_id.delete_messages(&ctx, messages).await
-        .map_err(CommandError::from)
 }
