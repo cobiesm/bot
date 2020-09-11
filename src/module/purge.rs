@@ -19,18 +19,19 @@ pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
 
     msg.channel_id.broadcast_typing(&ctx).await.ok();
 
-    let with_id = amount > 100;
-    let mut messages = msg.channel_id.messages(&ctx, |builder| {
-        let builder = builder.before(msg.id);
+    let with_id = amount + 1 > 100;
+    let messages = msg.channel_id.messages(&ctx, |builder| {
         if with_id {
-            builder.after(amount)
+            if block_on(msg.channel_id.message(ctx, amount)).is_ok() {
+                builder.after(amount)
+            } else {
+                builder
+            }
         } else {
-            builder.limit(amount)
+            builder.limit(amount + 1)
         }
     }).await?;
 
-    if with_id {
-        messages.remove(0);
     }
 
     msg.channel_id.delete_messages(&ctx, messages).await
