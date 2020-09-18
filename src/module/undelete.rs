@@ -1,6 +1,7 @@
+use strsim::normalized_damerau_levenshtein;
 use chrono::prelude::*;
 use futures::stream::{self, StreamExt};
-use serenity::http::AttachmentType;
+use serenity::{http::AttachmentType, model::channel::Message, model::event::MessageUpdateEvent};
 use serenity::client::Context;
 use serenity::model::id::{ ChannelId, MessageId };
 
@@ -13,6 +14,34 @@ lazy_static!(
         655552145667653654,
     ];
 );
+
+async fn undelete(ctx: &Context, message: Message) {
+    let hook = ctx.http.as_ref().get_webhook(752309480812969996).await.unwrap();
+    let content = message.content_safe(ctx).await;
+
+    let channel_name = message.channel_id.name(ctx).await.map_or(
+        String::from("bilinmeyen"), |name| name
+    );
+
+    hook.execute(&ctx, false, |w| {
+        w.content(content)
+            .username(format!("{}@{}", message.author.name, channel_name))
+            .avatar_url(message.author.avatar_url().unwrap())
+    }).await.ok();
+
+    if !message.attachments.is_empty() {
+        hook.channel_id.send_files(
+            &ctx,
+            stream::iter(&message.attachments).then(|at| async move {
+                AttachmentType::Bytes {
+                    data: at.download().await.unwrap().into(),
+                    filename: at.filename.clone(),
+                }
+            }).collect::<Vec<_>>().await,
+            |at| at.content(format!("^^{}", message.author))
+        ).await.ok();
+    }
+}
 
 pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message_id: MessageId) {
     let old_message = match ctx.cache.message(channel_id, message_id).await {
@@ -30,26 +59,17 @@ pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message_id: Me
         return
     }
 
-    let hook = ctx.http.as_ref().get_webhook(752309480812969996).await.unwrap();
-    let channel_name = old_message.channel_id.name(&ctx).await.unwrap();
-    let content = old_message.content_safe(ctx).await;
+    undelete(ctx, old_message).await;
+}
 
-    hook.execute(&ctx, false, |w| {
-        w.content(content)
-            .username(format!("{}@{}", &old_message.author.name, channel_name))
-            .avatar_url(old_message.author.avatar_url().unwrap())
-    }).await.ok();
-
-    if !old_message.attachments.is_empty() {
-        hook.channel_id.send_files(
-            &ctx,
-            stream::iter(&old_message.attachments).then(|at| async move {
-                AttachmentType::Bytes {
-                    data: at.download().await.unwrap().into(),
-                    filename: at.filename.clone(),
-                }
-            }).collect::<Vec<_>>().await,
-            |at| at.content(format!("^^{}", &old_message.author))
-        ).await.ok();
+pub async fn message_update(ctx: &Context, old: Option<Message>,
+                            new: Option<Message>, _event: MessageUpdateEvent)
+{
+    if let Some(old) = old {
+        if let Some(new) = new {
+            if normalized_damerau_levenshtein(&old.content, &new.content) < 0.5 {
+                undelete(ctx, old).await;
+            }
+        }
     }
 }

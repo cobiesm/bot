@@ -1,4 +1,4 @@
-use serenity::async_trait;
+use serenity::{async_trait, model::event::MessageUpdateEvent};
 use serenity::client::Context;
 use serenity::model::channel::{ Message, Reaction };
 use serenity::model::id::{ ChannelId, MessageId };
@@ -32,5 +32,11 @@ impl EventHandler for Handler {
                       channel_id: ChannelId, message_id: MessageId)
     {
         undelete::message_delete(&ctx, channel_id, message_id).await;
+    }
+
+    async fn message_update(&self, ctx: Context, old: Option<Message>,
+                            new: Option<Message>, event: MessageUpdateEvent)
+    {
+        undelete::message_update(&ctx, old, new, event).await;
     }
 }
