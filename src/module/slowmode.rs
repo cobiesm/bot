@@ -15,7 +15,7 @@ pub async fn message(ctx: &Context, msg: &Message) {
         oldmsg.author == msg.author
     }).cloned().collect::<Vec<Message>>();
 
-    if messages.len() > 1 && msg.timestamp - messages.get(1).unwrap().timestamp < Duration::milliseconds(750) {
+    if messages.len() > 1 && msg.timestamp - messages.get(1).unwrap().timestamp < Duration::milliseconds(250) {
         msg.delete(ctx).await.ok();
     }
 }
