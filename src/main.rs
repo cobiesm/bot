@@ -17,6 +17,7 @@ mod module;
 use module::help::HELP;
 
 use std::env;
+use tokio::signal::unix::{ signal, SignalKind };
 use serenity::client::Client;
 use serenity::framework::StandardFramework;
 use serenity::framework::standard::CommandError;
@@ -38,6 +39,17 @@ async fn main() {
     ).await.expect("Girilen token, token değil.");
 
     client.cache_and_http.cache.set_max_messages(1000).await;
+    
+    let shard_manager = client.shard_manager.clone();
+    tokio::spawn(async move {
+        let mut signal = signal(SignalKind::terminate()).unwrap();
+        loop {
+            signal.recv().await.unwrap();
+            println!("\nHele bi soluklanayım.");
+            shard_manager.lock().await.shutdown_all().await;
+        }
+    });
+
     if let Err(err) = client.start().await {
         println!("Başlangıç sırasında bir hata ile karşılaşıldı: {:?}", err);
     }
