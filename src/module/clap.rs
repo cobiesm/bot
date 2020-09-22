@@ -14,10 +14,8 @@ lazy_static!(
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let message = reaction.message(ctx).await.unwrap();
-    let duration = Utc::now() - message.timestamp;
 
     if reaction.user_id.unwrap() == message.author.id
-        || duration > chrono::Duration::minutes(20)
     {
         reaction.delete(ctx).await.ok();
         return;
@@ -25,14 +23,14 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
     let reactions = calc_reactions(ctx, &message).await;
 
-    if reactions <= 4 {
-        return;
-    } else if reactions > 5 {
+    if reactions == 5 {
         for task in TASKS.lock().await.iter() {
             if task.0 == message.id.as_u64() && *task.1 {
                 return;
             }
         }
+    } else {
+        return;
     }
 
     message.channel_id.broadcast_typing(ctx).await.unwrap();
@@ -42,6 +40,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     tokio::spawn(async move {
         let mut tasks = TASKS.lock().await;
         tasks.insert(*message.id.as_u64(), true);
+        let duration = Utc::now() - message.timestamp;
         sleep((chrono::Duration::minutes(20) - duration).to_std().unwrap());
         let reactions = calc_reactions(&http, &message).await;
 
