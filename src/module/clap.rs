@@ -10,13 +10,15 @@ static Q_CHANNELID: u64 = 670984869941346304;
 
 lazy_static!(
     static ref TASKS: Mutex<HashMap<u64, bool>> = Mutex::new(HashMap::new());
+    static ref CLAP: ReactionType = ReactionType::Unicode("👏".into());
 );
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let message = reaction.message(ctx).await.unwrap();
 
-    if reaction.user_id.unwrap() == message.author.id
-    {
+    if reaction.emoji != *CLAP {
+        return;
+    } else if reaction.user_id.unwrap() == message.author.id {
         reaction.delete(ctx).await.ok();
         return;
     }
@@ -68,6 +70,6 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
 async fn calc_reactions(http: impl AsRef<Http> + Send + Sync, message: &Message) -> usize {
     message.reaction_users(
-        http, ReactionType::Unicode("👏".into()), None, None
+        http, CLAP.clone(), None, None
     ).await.unwrap().len()
 }
