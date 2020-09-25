@@ -86,7 +86,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
     let online_count = stream::iter(&guild.presences).filter(|p| {
         future::ready(
-            p.1.status != OnlineStatus::Offline && !block_on(p.0.to_user(ctx)).unwrap().bot
+            p.1.status != OnlineStatus::Offline
             && block_on(guild.member(ctx, p.0)).unwrap().roles.iter().any(|role| role == &ace)
         )
     }).collect::<Vec<(&UserId, &Presence)>>().await.len();
@@ -114,7 +114,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let unwanted_curse = is_curse
         && reacters.len() as f32 >= (online_count as f32 / 2.4).round();
 
-    let unwanted_noncurse = reacters.len() == online_count;
+    let unwanted_noncurse = reacters.len() as f32 >= (online_count as f32 / 1.15).round();
 
     if unwanted_curse || (online_count >= 3 && unwanted_noncurse) {
         reaction.message(ctx).await.unwrap().delete(ctx).await.unwrap();
