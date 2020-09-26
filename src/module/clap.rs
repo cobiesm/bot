@@ -1,6 +1,5 @@
 use std::thread::sleep;
 use std::collections::HashMap;
-use chrono::prelude::*;
 use tokio::sync::Mutex;
 use serenity::http::Http;
 use serenity::client::Context;
@@ -42,8 +41,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     tokio::spawn(async move {
         let mut tasks = TASKS.lock().await;
         tasks.insert(*message.id.as_u64(), true);
-        let duration = Utc::now() - message.timestamp;
-        sleep((chrono::Duration::minutes(20) - duration).to_std().unwrap());
+        sleep(chrono::Duration::minutes(5).to_std().unwrap());
         let reactions = calc_reactions(&http, &message).await;
 
         let channel = http.get_channel(Q_CHANNELID).await.unwrap()
