@@ -1,8 +1,8 @@
-use std::error::Error;
+use async_trait::async_trait;
 use futures::future;
 use futures::executor::block_on;
 use futures::stream::{self, StreamExt};
-use serenity::client::Context;
+use serenity::{client::Context, framework::standard::Args, framework::standard::macros::command, framework::standard::CommandResult, model::channel::Message, framework::standard::CommandError};
 use serenity::model::{
     channel::{ Reaction, PermissionOverwrite, PermissionOverwriteType, ReactionType },
     guild::Member,
@@ -14,48 +14,51 @@ use serenity::model::{
     gateway::Presence
 };
 
+#[async_trait]
 trait Muteable {
-    fn mute(&mut self, ctx: &Context) -> Result<(), Box<dyn Error>>;
-    fn unmute(&mut self, ctx: &Context) -> Result<(), Box<dyn Error>>;
+    async fn mute(&mut self, ctx: &Context) -> serenity::Result<()>;
+    async fn unmute(&mut self, ctx: &Context) -> serenity::Result<()>;
 }
 
+#[async_trait]
 impl Muteable for Member {
-    fn mute(&mut self, ctx: &Context) -> Result<(), Box<dyn Error>> {
-        let guild = block_on(self.guild_id.to_partial_guild(ctx))?;
-        let roleid = if let Some(role) = guild.role_by_name("muted") {
+    async fn mute(&mut self, ctx: &Context) -> serenity::Result<()> {
+        let guild = self.guild_id.to_partial_guild(ctx).await?;
+        let roleid = if let Some(role) = guild.role_by_name("Muted") {
             role.id
         } else {
-            let role = block_on(guild.create_role(ctx, |builder| {
-                builder.name("muted")
-                    .mentionable(true)
-                    .colour(818_386)
-            }))?;
-
             let allow = Permissions::default();
             let mut deny = Permissions::SEND_MESSAGES;
             deny.insert(Permissions::SPEAK);
             deny.insert(Permissions::ADD_REACTIONS);
-            let overwrite = PermissionOverwrite {
-                allow,
-                deny,
-                kind: PermissionOverwriteType::Role(role.id)
-            };
 
-            block_on(guild.channels(ctx))?.values().for_each(|channel| {
-                block_on(channel.create_permission(ctx, &overwrite)).ok();
-            });
+            ctx.invisible().await;
+            let role = guild.create_role(ctx, |builder| {
+                builder.name("Muted")
+                    .mentionable(true)
+                    .colour(818_386)
+            }).await?;
+
+            for channel in guild.channels(ctx).await?.values() {
+                channel.create_permission(ctx, &PermissionOverwrite {
+                    allow,
+                    deny,
+                    kind: PermissionOverwriteType::Role(role.id)
+                }).await.ok();
+            }
             role.id
         };
 
-        block_on(self.add_role(ctx, roleid))?;
+        self.add_role(ctx, roleid).await?;
         Ok(())
     }
 
-    fn unmute(&mut self, ctx: &Context) -> Result<(), Box<dyn Error>> {
-        if let Some(role) = block_on(self.guild_id.to_partial_guild(ctx))?.role_by_name("muted") {
-            block_on(self.remove_role(ctx, role.id))?;
+    async fn unmute(&mut self, ctx: &Context) -> serenity::Result<()> {
+        if let Some(role) = self.guild_id.to_partial_guild(ctx).await?.role_by_name("Muted") {
+            self.remove_role(ctx, role.id).await
+        } else {
+            Err(serenity::Error::Other("Rol yok hocam bu nası iş?"))
         }
-        Ok(())
     }
 }
 
@@ -118,5 +121,27 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
     if unwanted_curse || (online_count >= 3 && unwanted_noncurse) {
         reaction.message(ctx).await.unwrap().delete(ctx).await.unwrap();
+    }
+}
+
+#[command]
+#[num_args(1)]
+pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    if let Some(user) = msg.guild(ctx).await.unwrap().member_named(&args.single::<String>()?) {
+        let mut user = ctx.http.get_member(user.guild_id.into(), user.user.id.into()).await?;
+        user.mute(ctx).await.map_err(CommandError::from)
+    } else {
+        Err("Kim bu amk tanımıyorum.".into())
+    }
+}
+
+#[command]
+#[num_args(1)]
+pub async fn unmute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    if let Some(user) = msg.guild(ctx).await.unwrap().member_named(&args.single::<String>()?) {
+        let mut user = ctx.http.get_member(user.guild_id.into(), user.user.id.into()).await?;
+        user.unmute(ctx).await.map_err(CommandError::from)
+    } else {
+        Err("Kim bu amk tanımıyorum.".into())
     }
 }
