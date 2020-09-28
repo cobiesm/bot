@@ -1,15 +1,10 @@
-use std::collections::HashSet;
-use serenity::model::id::UserId;
-use serenity::model::channel::Message;
-use serenity::prelude::Context;
 use serenity::framework::standard::{
-    Args,
-    CommandGroup,
-    CommandResult,
-    HelpOptions,
-    help_commands,
-    macros::help
+    help_commands, macros::help, Args, CommandGroup, CommandResult, HelpOptions,
 };
+use serenity::model::channel::Message;
+use serenity::model::id::UserId;
+use serenity::prelude::Context;
+use std::collections::HashSet;
 
 #[help]
 #[strikethrough_commands_tip_in_guild = ""]
@@ -34,7 +29,7 @@ async fn help(
     args: Args,
     help_options: &'static HelpOptions,
     groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>
+    owners: HashSet<UserId>,
 ) -> CommandResult {
     help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
     Ok(())

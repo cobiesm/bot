@@ -1,6 +1,6 @@
 use regex::Regex;
 use serenity::client::Context;
-use serenity::model::channel::{ Message, ReactionType };
+use serenity::model::channel::{Message, ReactionType};
 
 lazy_static! {
     static ref MATCHER: Regex = Regex::new(
@@ -9,11 +9,14 @@ lazy_static! {
         ^sik(ik|ti|er|ko|di) | or+os+pu | piç | ana*skm | yobaz | çomar | kancık | amcık |
         yavşak | göt\s?veren
         "
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 pub async fn message(ctx: &Context, msg: &Message) {
     if msg.guild_id.is_some() && !msg.author.bot && MATCHER.is_match(&msg.content) {
-        msg.react(ctx, ReactionType::Unicode("👿".into())).await.ok(); // imp
+        msg.react(ctx, ReactionType::Unicode("👿".into()))
+            .await
+            .ok(); // imp
     }
 }

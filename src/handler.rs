@@ -1,11 +1,12 @@
-use serenity::{async_trait, model::event::MessageUpdateEvent};
+use crate::module::{
+    badword, blacklink, clap, faq, presence, selfmod, slowmode, startup_message, undelete,
+};
 use serenity::client::Context;
-use serenity::model::channel::{ Message, Reaction };
-use serenity::model::id::{ ChannelId, MessageId };
+use serenity::model::channel::{Message, Reaction};
 use serenity::model::gateway::Ready;
+use serenity::model::id::{ChannelId, MessageId};
 use serenity::prelude::EventHandler;
-use crate::module::{ badword, blacklink, presence, selfmod, slowmode, startup_message,
-                     faq, undelete, clap };
+use serenity::{async_trait, model::event::MessageUpdateEvent};
 
 pub struct Handler;
 
@@ -28,15 +29,17 @@ impl EventHandler for Handler {
         startup_message::ready(&ctx).await;
     }
 
-    async fn message_delete(&self, ctx: Context,
-                      channel_id: ChannelId, message_id: MessageId)
-    {
+    async fn message_delete(&self, ctx: Context, channel_id: ChannelId, message_id: MessageId) {
         undelete::message_delete(&ctx, channel_id, message_id).await;
     }
 
-    async fn message_update(&self, ctx: Context, old: Option<Message>,
-                            new: Option<Message>, event: MessageUpdateEvent)
-    {
+    async fn message_update(
+        &self,
+        ctx: Context,
+        old: Option<Message>,
+        new: Option<Message>,
+        event: MessageUpdateEvent,
+    ) {
         undelete::message_update(&ctx, old, new, event).await;
     }
 }
