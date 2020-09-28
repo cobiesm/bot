@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures::future;
 use futures::executor::block_on;
 use futures::stream::{self, StreamExt};
-use serenity::{client::Context, framework::standard::Args, framework::standard::macros::command, framework::standard::CommandResult, model::channel::Message, framework::standard::CommandError};
+use serenity::client::Context;
 use serenity::model::{
     channel::{ Reaction, PermissionOverwrite, PermissionOverwriteType, ReactionType },
     guild::Member,
@@ -15,7 +15,7 @@ use serenity::model::{
 };
 
 #[async_trait]
-trait Muteable {
+pub trait Muteable {
     async fn mute(&mut self, ctx: &Context) -> serenity::Result<()>;
     async fn unmute(&mut self, ctx: &Context) -> serenity::Result<()>;
 }
@@ -121,27 +121,5 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
     if unwanted_curse || (online_count >= 3 && unwanted_noncurse) {
         reaction.message(ctx).await.unwrap().delete(ctx).await.unwrap();
-    }
-}
-
-#[command]
-#[num_args(1)]
-pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    if let Some(user) = msg.guild(ctx).await.unwrap().member_named(&args.single::<String>()?) {
-        let mut user = ctx.http.get_member(user.guild_id.into(), user.user.id.into()).await?;
-        user.mute(ctx).await.map_err(CommandError::from)
-    } else {
-        Err("Kim bu amk tanımıyorum.".into())
-    }
-}
-
-#[command]
-#[num_args(1)]
-pub async fn unmute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    if let Some(user) = msg.guild(ctx).await.unwrap().member_named(&args.single::<String>()?) {
-        let mut user = ctx.http.get_member(user.guild_id.into(), user.user.id.into()).await?;
-        user.unmute(ctx).await.map_err(CommandError::from)
-    } else {
-        Err("Kim bu amk tanımıyorum.".into())
     }
 }
