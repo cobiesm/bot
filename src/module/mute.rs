@@ -9,8 +9,7 @@ use serenity::{
 #[num_args(1)]
 pub async fn mute(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     find_member(ctx, msg, args)
-        .await
-        .unwrap()
+        .await?
         .mute(ctx)
         .await
         .map_err(CommandError::from)
@@ -20,24 +19,22 @@ pub async fn mute(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[num_args(1)]
 pub async fn unmute(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     find_member(ctx, msg, args)
-        .await
-        .unwrap()
+        .await?
         .unmute(ctx)
         .await
         .map_err(CommandError::from)
 }
 
 pub async fn find_member(ctx: &Context, msg: &Message, mut args: Args) -> serenity::Result<Member> {
-    if let Some(user) = msg
+    Ok(msg
         .guild(ctx)
         .await
-        .ok_or(serenity::Error::Other("Guild!!?"))?
-        .member_named(&args.single::<String>().unwrap())
-    {
-        ctx.http
-            .get_member(user.guild_id.into(), user.user.id.into())
-            .await
-    } else {
-        Err(serenity::Error::Other("Kim bu amk tanımıyorum."))
-    }
+        .ok_or(serenity::Error::Other("guild!!?"))?
+        .members_containing(&args.single::<String>().unwrap(), false, true)
+        .await
+        .first()
+        .ok_or(serenity::Error::Other("kim bu amk tanımıyorum."))?
+        .0
+        .clone())
+    //.map_or(Err(serenity::Error::Other("Kim bu amk tanımıyorum.")))
 }
