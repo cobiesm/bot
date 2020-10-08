@@ -5,6 +5,8 @@
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_possible_truncation)]
 
 #[macro_use]
 extern crate lazy_static;
