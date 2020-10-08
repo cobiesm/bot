@@ -401,6 +401,7 @@ dependencies = [
  "chrono",
  "futures",
  "lazy_static",
+ "rand",
  "regex",
  "reqwest",
  "serde_json",
