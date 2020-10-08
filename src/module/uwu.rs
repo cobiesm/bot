@@ -9,6 +9,8 @@ lazy_static! {
     static ref UWUWIZER: Regex = Regex::new(r"(?i)r|l").unwrap();
 }
 
+static ERR_NOMATCH: &str = "uwuwanacak bişi buwamadım.";
+
 #[command]
 #[max_args(1)]
 #[description = "Uwuwuwu."]
@@ -27,16 +29,16 @@ pub async fn uwu(ctx: &Context, msg: &Message) -> CommandResult {
             channel
                 .messages(ctx, |b| b.before(msg.id).limit(1))
                 .await
-                .unwrap()
+                .map_err(|_| ERR_NOMATCH)?
                 .first()
-                .unwrap()
+                .ok_or(ERR_NOMATCH)?
                 .content_safe(ctx)
                 .await
         }
     };
 
     if !UWUWIZER.is_match(&text) {
-        return Err("uwuwanacak bişi buwamadım.".into());
+        return Err(ERR_NOMATCH.into());
     }
 
     UWUWIZER.find_iter(&text.clone()).for_each(|m| {

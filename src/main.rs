@@ -69,12 +69,6 @@ async fn main() {
 #[hook]
 async fn after_hook(ctx: &Context, msg: &Message, _: &str, error: Result<(), CommandError>) {
     if let Err(error) = error {
-        let error = match error.to_string().as_str() {
-            "Unknown Message" => CommandError::from(
-                "girdiğin mesajın var olduğundan ve bu kanalda olduğundan emin misin?",
-            ),
-            _ => error,
-        };
         let member = msg.member(ctx).await.unwrap();
         msg.channel_id
             .send_message(ctx, |b| b.content(format!("{}, *{}*", member, error)))
