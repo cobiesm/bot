@@ -73,7 +73,11 @@ async fn after_hook(ctx: &Context, msg: &Message, _: &str, error: Result<(), Com
             ),
             _ => error,
         };
-        msg.reply(ctx, error).await.ok();
+        let member = msg.member(ctx).await.unwrap();
+        msg.channel_id
+            .send_message(ctx, |b| b.content(format!("{}, *{}*", member, error)))
+            .await
+            .ok();
     } else {
         react_ok(ctx, msg).await;
     }
