@@ -11,7 +11,7 @@ use serenity::model::{
     id::ChannelId,
     id::UserId,
     permissions::Permissions,
-    user::{OnlineStatus, User},
+    user::User,
 };
 use serenity::{client::Context, http::Http};
 
@@ -99,32 +99,19 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         }
     };
 
-    let is_ace = match user.has_role(ctx, guild.id, ace).await {
-        Ok(r) => r,
-        Err(e) => {
-            println!("{}", e);
-            return;
-        } // TODO: Error printing could be nicer
-    };
-
-    let online_count = stream::iter(&guild.presences)
+    let ace_count = stream::iter(&guild.presences)
         .filter(|p| {
             future::ready(
-                p.1.status != OnlineStatus::Offline
-                    && block_on(guild.member(ctx, p.0))
-                        .unwrap()
-                        .roles
-                        .iter()
-                        .any(|role| role == &ace),
+                block_on(guild.member(ctx, p.0))
+                    .unwrap()
+                    .roles
+                    .iter()
+                    .any(|role| role == &ace),
             )
         })
         .collect::<Vec<(&UserId, &Presence)>>()
         .await
         .len();
-
-    if (online_count <= 2 && is_ace) || online_count < 2 {
-        return;
-    }
 
     reaction.channel_id.broadcast_typing(ctx).await.ok();
 
@@ -149,11 +136,11 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         .await
         .is_empty();
 
-    let unwanted_curse = is_curse && reacters.len() as f32 >= (online_count as f32 / 2.4).round();
+    let unwanted_curse = is_curse && reacters.len() as f32 >= (ace_count as f32 / 2.4).round();
 
-    let unwanted_noncurse = reacters.len() as f32 >= (online_count as f32 / 1.15).round();
+    let unwanted_noncurse = reacters.len() as f32 >= (ace_count as f32 / 1.4).round();
 
-    if unwanted_curse || (online_count >= 3 && unwanted_noncurse) {
+    if unwanted_curse || unwanted_noncurse {
         reaction
             .message(ctx)
             .await
