@@ -1,27 +1,30 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use futures::executor::block_on;
 use futures::future;
 use futures::stream::{self, StreamExt};
-use serenity::client::Context;
 use serenity::model::{
     channel::{PermissionOverwrite, PermissionOverwriteType, Reaction, ReactionType},
     gateway::Presence,
     guild::Member,
+    id::ChannelId,
     id::UserId,
     permissions::Permissions,
     user::{OnlineStatus, User},
 };
+use serenity::{client::Context, http::Http};
 
 #[async_trait]
 pub trait Muteable {
-    async fn mute(&mut self, ctx: &Context) -> serenity::Result<()>;
-    async fn unmute(&mut self, ctx: &Context) -> serenity::Result<()>;
+    async fn mute(&mut self, http: Arc<Http>) -> serenity::Result<()>;
+    async fn unmute(&mut self, http: Arc<Http>) -> serenity::Result<()>;
 }
 
 #[async_trait]
 impl Muteable for Member {
-    async fn mute(&mut self, ctx: &Context) -> serenity::Result<()> {
-        let guild = self.guild_id.to_partial_guild(ctx).await?;
+    async fn mute(&mut self, http: Arc<Http>) -> serenity::Result<()> {
+        let guild = self.guild_id.to_partial_guild(http.as_ref()).await?;
         let roleid = if let Some(role) = guild.role_by_name("Muted") {
             role.id
         } else {
@@ -30,17 +33,16 @@ impl Muteable for Member {
             deny.insert(Permissions::SPEAK);
             deny.insert(Permissions::ADD_REACTIONS);
 
-            ctx.invisible().await;
             let role = guild
-                .create_role(ctx, |builder| {
+                .create_role(http.as_ref(), |builder| {
                     builder.name("Muted").mentionable(true).colour(818_386)
                 })
                 .await?;
 
-            for channel in guild.channels(ctx).await?.values() {
+            for channel in guild.channels(http.as_ref()).await?.values() {
                 channel
                     .create_permission(
-                        ctx,
+                        http.as_ref(),
                         &PermissionOverwrite {
                             allow,
                             deny,
@@ -53,18 +55,18 @@ impl Muteable for Member {
             role.id
         };
 
-        self.add_role(ctx, roleid).await?;
+        self.add_role(http.as_ref(), roleid).await?;
         Ok(())
     }
 
-    async fn unmute(&mut self, ctx: &Context) -> serenity::Result<()> {
+    async fn unmute(&mut self, http: Arc<Http>) -> serenity::Result<()> {
         if let Some(role) = self
             .guild_id
-            .to_partial_guild(ctx)
+            .to_partial_guild(http.as_ref())
             .await?
             .role_by_name("Muted")
         {
-            self.remove_role(ctx, role.id).await
+            self.remove_role(http.as_ref(), role.id).await
         } else {
             Err(serenity::Error::Other("Rol yok hocam bu nası iş?"))
         }
@@ -159,5 +161,51 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
             .delete(ctx)
             .await
             .unwrap();
+    }
+
+    if unwanted_curse {
+        mute(
+            guild.member(ctx, user.id).await.unwrap(),
+            ctx.http.clone(),
+            reaction.channel_id,
+        )
+        .await;
+    }
+}
+
+async fn mute(mut member: Member, http: Arc<Http>, channel: ChannelId) {
+    member.mute(http.clone()).await.ok();
+
+    let mut mem2 = member.clone();
+    let http2 = http.clone();
+    let tstatus = tokio::spawn(async move {
+        channel
+            .send_message(http2.as_ref(), |m| {
+                m.content(format!(
+                    "{}, uygunsuz kelime kullanımından ötürü oy birliği ile susturuldu.",
+                    mem2
+                ))
+            })
+            .await
+            .ok();
+        std::thread::sleep(std::time::Duration::from_secs(1200));
+        mem2.unmute(http2.clone()).await.ok();
+        channel
+            .send_message(http2.as_ref(), |m| {
+                m.content(format!("Artık konuşabilirsin {}.", &mem2))
+            })
+            .await
+            .ok();
+    })
+    .await;
+
+    if tstatus.is_err() {
+        member.unmute(http.clone()).await.ok();
+        channel
+            .send_message(http.as_ref(), |m| {
+                m.content("Susturma başarısız olduğu için işlem geri alındı.")
+            })
+            .await
+            .ok();
     }
 }

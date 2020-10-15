@@ -10,7 +10,7 @@ use serenity::{
 pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     find_member(ctx, msg, &args.single::<String>()?)
         .await?
-        .mute(ctx)
+        .mute(ctx.http.clone())
         .await
         .map_err(CommandError::from)
 }
@@ -20,7 +20,7 @@ pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 pub async fn unmute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     find_member(ctx, msg, &args.single::<String>()?)
         .await?
-        .unmute(ctx)
+        .unmute(ctx.http.clone())
         .await
         .map_err(CommandError::from)
 }
