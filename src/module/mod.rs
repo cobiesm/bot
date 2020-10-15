@@ -9,7 +9,6 @@ pub mod presence;
 pub mod purge;
 pub mod selfmod;
 pub mod slowmode;
-pub mod startup_message;
 pub mod undelete;
 pub mod uwu;
 pub mod yarra;

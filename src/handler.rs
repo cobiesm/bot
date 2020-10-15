@@ -1,6 +1,4 @@
-use crate::module::{
-    badword, blacklink, clap, faq, presence, selfmod, slowmode, startup_message, undelete,
-};
+use crate::module::{badword, blacklink, clap, faq, presence, selfmod, slowmode, undelete};
 use serenity::client::Context;
 use serenity::model::channel::{Message, Reaction};
 use serenity::model::gateway::Ready;
@@ -26,7 +24,6 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
         presence::ready(&ctx).await;
-        startup_message::ready(&ctx).await;
     }
 
     async fn message_delete(&self, ctx: Context, channel_id: ChannelId, message_id: MessageId) {
