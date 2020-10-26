@@ -13,7 +13,12 @@ lazy_static! {
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
-    let message = reaction.message(ctx).await.unwrap();
+    let message = reaction.message(ctx).await;
+    if message.is_err() {
+        return;
+    }
+
+    let message = message.unwrap();
 
     if reaction.emoji != *CLAP {
         return;
