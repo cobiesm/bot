@@ -2,7 +2,6 @@ use serenity::client::Context;
 use serenity::http::Http;
 use serenity::model::channel::{Message, Reaction, ReactionType};
 use std::collections::HashMap;
-use std::thread::sleep;
 use tokio::sync::Mutex;
 
 static Q_CHANNELID: u64 = 670984869941346304;
@@ -46,7 +45,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     tokio::spawn(async move {
         let mut tasks = TASKS.lock().await;
         tasks.insert(*message.id.as_u64(), true);
-        sleep(chrono::Duration::minutes(5).to_std().unwrap());
+        tokio::time::delay_for(std::time::Duration::from_secs(5 * 60)).await;
         let reactions = calc_reactions(&http, &message).await;
 
         let channel = http

@@ -175,7 +175,6 @@ async fn mute(mut member: Member, http: Arc<Http>, channel: ChannelId) {
             })
             .await
             .ok();
-        std::thread::sleep(std::time::Duration::from_secs(1200));
         mem2.unmute(http2.clone()).await.ok();
         channel
             .send_message(http2.as_ref(), |m| {
@@ -187,6 +186,7 @@ async fn mute(mut member: Member, http: Arc<Http>, channel: ChannelId) {
     .await;
 
     if tstatus.is_err() {
+        tokio::time::delay_for(std::time::Duration::from_secs(20)).await;
         member.unmute(http.clone()).await.ok();
         channel
             .send_message(http.as_ref(), |m| {
