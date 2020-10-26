@@ -5,7 +5,7 @@ use serenity::model::channel::Message;
 lazy_static! {
     static ref MATCHER: Regex = Regex::new(
         r"(?ix)(
-        facebook | twitter | spotify | webtekno
+        facebook | twitter | spotify | webtekno | onedio
         ){1}\.[a-z]{2,4}\b(/[a-z0-9@:%\s+.~\#?&/=-]*)?"
     )
     .unwrap();
