@@ -5,8 +5,8 @@ use futures::executor::block_on;
 use futures::future;
 use futures::stream::{self, StreamExt};
 use serenity::model::{
+    channel::Message,
     channel::{PermissionOverwrite, PermissionOverwriteType, Reaction, ReactionType},
-    gateway::Presence,
     guild::Member,
     id::ChannelId,
     id::UserId,
@@ -74,23 +74,40 @@ impl Muteable for Member {
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
-    let user = match reaction.user(ctx).await {
+    let user_reacted = match reaction.user(ctx).await {
         Ok(u) => u,
         Err(_) => {
             return;
         }
     };
 
-    if reaction.emoji != ReactionType::Unicode("👿".into()) || user.bot {
+    if reaction.emoji != ReactionType::Unicode("👿".into()) || user_reacted.bot {
         return;
     }
 
+    let message = reaction.message(ctx).await.unwrap();
+    let member = reaction
+        .guild_id
+        .unwrap()
+        .member(ctx, message.author.id)
+        .await
+        .unwrap();
     let guild = match reaction.guild_id {
         Some(g) => g.to_guild_cached(ctx).await.unwrap().clone(),
         None => {
             return;
         }
     };
+
+    if user_reacted
+        .has_role(ctx, guild.id, guild.role_by_name("🔑").unwrap())
+        .await
+        .unwrap()
+    {
+        reaction.channel_id.broadcast_typing(ctx).await.ok();
+        punish(message, member, ctx, true).await;
+        return;
+    }
 
     let ace = match guild.role_by_name("ACE") {
         Some(r) => r.id,
@@ -99,19 +116,17 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         }
     };
 
-    let ace_count = stream::iter(&guild.presences)
-        .filter(|p| {
-            future::ready(
-                block_on(guild.member(ctx, p.0))
-                    .unwrap()
-                    .roles
-                    .iter()
-                    .any(|role| role == &ace),
-            )
+    let ace_count = guild
+        .presences
+        .iter()
+        .filter(|presence| {
+            block_on(guild.member(ctx, presence.0))
+                .unwrap()
+                .roles
+                .iter()
+                .any(|role| role == &ace)
         })
-        .collect::<Vec<(&UserId, &Presence)>>()
-        .await
-        .len();
+        .count();
 
     reaction.channel_id.broadcast_typing(ctx).await.ok();
 
@@ -137,62 +152,41 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         .is_empty();
 
     let unwanted_curse = is_curse && reacters.len() as f32 >= (ace_count as f32 / 2.4).round();
-
     let unwanted_noncurse = reacters.len() as f32 >= (ace_count as f32 / 1.4).round();
 
     if unwanted_curse || unwanted_noncurse {
-        reaction
-            .message(ctx)
-            .await
-            .unwrap()
-            .delete(ctx)
-            .await
-            .unwrap();
+        punish(message, member, ctx, unwanted_curse).await;
     }
+}
 
-    if unwanted_curse {
-        mute(
-            guild.member(ctx, user.id).await.unwrap(),
-            ctx.http.clone(),
-            reaction.channel_id,
-        )
-        .await;
+async fn punish(message: Message, member: Member, ctx: &Context, is_curse: bool) {
+    message.delete(ctx).await.unwrap();
+
+    if is_curse {
+        mute(member, ctx.http.clone(), message.channel_id).await;
     }
 }
 
 async fn mute(mut member: Member, http: Arc<Http>, channel: ChannelId) {
     member.mute(http.clone()).await.ok();
 
-    let mut mem2 = member.clone();
-    let http2 = http.clone();
-    let tstatus = tokio::spawn(async move {
+    tokio::spawn(async move {
         channel
-            .send_message(http2.as_ref(), |m| {
+            .send_message(http.as_ref(), |m| {
                 m.content(format!(
                     "{}, uygunsuz kelime kullanımından ötürü oy birliği ile susturuldu.",
-                    mem2
+                    member
                 ))
             })
             .await
             .ok();
-        mem2.unmute(http2.clone()).await.ok();
-        channel
-            .send_message(http2.as_ref(), |m| {
-                m.content(format!("Artık konuşabilirsin {}.", &mem2))
-            })
-            .await
-            .ok();
-    })
-    .await;
-
-    if tstatus.is_err() {
         tokio::time::delay_for(std::time::Duration::from_secs(20)).await;
         member.unmute(http.clone()).await.ok();
         channel
             .send_message(http.as_ref(), |m| {
-                m.content("Susturma başarısız olduğu için işlem geri alındı.")
+                m.content(format!("Artık konuşabilirsin {}.", &member))
             })
             .await
             .ok();
-    }
+    });
 }
