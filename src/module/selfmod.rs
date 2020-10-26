@@ -174,13 +174,13 @@ async fn mute(mut member: Member, http: Arc<Http>, channel: ChannelId) {
         channel
             .send_message(http.as_ref(), |m| {
                 m.content(format!(
-                    "{}, uygunsuz kelime kullanımından ötürü oy birliği ile susturuldu.",
+                    "{}, uygunsuz kelime kullanımından ötürü oy birliği ile 5dk susturuldu.",
                     member
                 ))
             })
             .await
             .ok();
-        tokio::time::delay_for(std::time::Duration::from_secs(20)).await;
+        tokio::time::delay_for(std::time::Duration::from_secs(5*60)).await;
         member.unmute(http.clone()).await.ok();
         channel
             .send_message(http.as_ref(), |m| {
