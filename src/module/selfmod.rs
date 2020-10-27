@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use futures::executor::block_on;
@@ -105,7 +105,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         .unwrap()
     {
         reaction.channel_id.broadcast_typing(ctx).await.ok();
-        punish(message, member, ctx, true).await;
+        punish(message, member, ctx, Duration::from_secs(40*60)).await;
         return;
     }
 
@@ -155,37 +155,46 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let unwanted_noncurse = reacters.len() as f32 >= (ace_count as f32 / 1.4).round();
 
     if unwanted_curse || unwanted_noncurse {
-        punish(message, member, ctx, unwanted_curse).await;
+        punish(
+            message,
+            member,
+            ctx,
+            if unwanted_curse {
+                Duration::from_secs(10 * 60)
+            } else {
+                Duration::from_secs(0)
+            },
+        )
+        .await;
     }
 }
 
-async fn punish(message: Message, member: Member, ctx: &Context, is_curse: bool) {
+async fn punish(message: Message, member: Member, ctx: &Context, curse: Duration) {
     message.delete(ctx).await.unwrap();
 
-    if is_curse {
-        mute(member, ctx.http.clone(), message.channel_id).await;
+    if curse > Duration::from_secs(0) {
+        mute(member, ctx.http.clone(), message.channel_id, curse).await;
     }
 }
 
-async fn mute(mut member: Member, http: Arc<Http>, channel: ChannelId) {
+async fn mute(mut member: Member, http: Arc<Http>, channel: ChannelId, duration: Duration) {
     member.mute(http.clone()).await.ok();
 
     tokio::spawn(async move {
         channel
             .send_message(http.as_ref(), |m| {
                 m.content(format!(
-                    "{}, uygunsuz kelime kullanımından ötürü oy birliği ile 5dk susturuldu.",
-                    member
+                    "{}, uygunsuz kelime kullanımından ötürü oy birliği ile {}dk susturuldu.",
+                    member, duration.as_secs() / 60
                 ))
             })
             .await
             .ok();
-        tokio::time::delay_for(std::time::Duration::from_secs(5*60)).await;
+        tokio::time::delay_for(duration).await;
         member.unmute(http.clone()).await.ok();
-        channel
-            .send_message(http.as_ref(), |m| {
-                m.content(format!("Artık konuşabilirsin {}.", &member))
-            })
+        member
+            .user
+            .direct_message(http, |m| m.content("Artık konuşabilirsin."))
             .await
             .ok();
     });
