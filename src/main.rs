@@ -17,6 +17,7 @@ mod handler;
 use handler::Handler;
 mod module;
 use module::help::HELP;
+mod muteable;
 
 use serenity::client::Client;
 use serenity::framework::standard::macros::hook;
