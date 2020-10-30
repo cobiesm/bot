@@ -15,7 +15,7 @@ pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         .mute(
             ctx.http.clone(),
             args.single::<i64>().ok().map(Duration::minutes),
-            args.single::<String>().ok(),
+            args.remains(),
         )
         .await
         .map_err(CommandError::from)
