@@ -85,9 +85,13 @@ pub async fn message_update(
 ) {
     if let Some(old) = old {
         if let Some(new) = new {
-            if normalized_damerau_levenshtein(&old.content, &new.content) < 0.5 {
+            if is_deleted(&old, &new) {
                 undelete(ctx, old).await;
             }
         }
     }
+}
+
+pub fn is_deleted(old: &Message, new: &Message) -> bool {
+    normalized_damerau_levenshtein(&old.content, &new.content) < 0.5
 }
