@@ -172,8 +172,8 @@ impl Level for Member {
     }
 
     async fn xp_give(&mut self, http: Arc<Http>, amount: f64) {
-        if !self.enough_passed().await {
         if amount.is_sign_positive() && !self.enough_passed().await {
+            self.xp_take(http, 0.02).await;
             return;
         }
 
