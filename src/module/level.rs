@@ -17,7 +17,6 @@ use serenity::{
 use super::undelete::is_deleted;
 
 lazy_static! {
-    static ref CLAP: ReactionType = ReactionType::Unicode("👏".into());
     static ref LEVEL_FINDER: Regex = Regex::new(r"\^(\d+\.\d+)$").unwrap();
 }
 
@@ -29,7 +28,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
     let message = message.unwrap();
 
-    if reaction.emoji != *CLAP {
+    if reaction.emoji != *super::clap::CLAP {
         return;
     } else if reaction.user_id.unwrap() == message.author.id {
         reaction.delete(ctx).await.ok();

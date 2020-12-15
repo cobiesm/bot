@@ -8,7 +8,7 @@ static Q_CHANNELID: u64 = 670984869941346304;
 
 lazy_static! {
     static ref TASKS: Mutex<HashMap<u64, bool>> = Mutex::new(HashMap::new());
-    static ref CLAP: ReactionType = ReactionType::Unicode("👏".into());
+    pub static ref CLAP: ReactionType = ReactionType::Unicode("👏".into());
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
