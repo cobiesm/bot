@@ -46,15 +46,8 @@ pub async fn message(ctx: &Context, msg: &Message) {
     }
 }
 
-pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message_id: MessageId) {
-    if let Some(mut member) = ctx
-        .cache
-        .message(channel_id, message_id)
-        .await
-        .unwrap()
-        .member(ctx)
-        .await
-    {
+pub async fn message_delete(ctx: &Context, _channel_id: ChannelId, message: Message) {
+    if let Some(mut member) = message.member(ctx).await {
         member.xp_take(ctx.http.clone(), 1.5).await;
     }
 }

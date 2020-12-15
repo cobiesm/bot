@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use futures::stream::{self, StreamExt};
 use serenity::client::Context;
-use serenity::model::id::{ChannelId, MessageId};
+use serenity::model::id::ChannelId;
 use serenity::{http::AttachmentType, model::channel::Message, model::event::MessageUpdateEvent};
 use strsim::normalized_damerau_levenshtein;
 
@@ -58,23 +58,17 @@ async fn undelete(ctx: &Context, message: Message) {
     }
 }
 
-pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message_id: MessageId) {
-    let old_message = match ctx.cache.message(channel_id, message_id).await {
-        Some(m) => m,
-        None => return,
-    };
-
+pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message: Message) {
     let tc = &Utc::now();
-    let tm = message_id.created_at();
-    if old_message.author.bot
+    let tm = message.timestamp;
+    if message.author.bot
         || tc.timestamp_millis() - tm.timestamp_millis() < 1500
-        || old_message.is_private()
         || BLACKLIST.contains(channel_id.as_u64())
     {
         return;
     }
 
-    undelete(ctx, old_message).await;
+    undelete(ctx, message).await;
 }
 
 pub async fn message_update(
