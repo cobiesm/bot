@@ -18,13 +18,16 @@ use tokio::sync::Mutex;
 use super::undelete::is_deleted;
 
 lazy_static! {
+    static ref EH_ISTE: RoleId = RoleId{ 0: 763769069605224458 };
+    static ref ACE: RoleId = RoleId{ 0: 664070917801902093 };
+    static ref NULL: RoleId = RoleId{ 0: 717039238423642242 };
     static ref GUILD_ID: u64 = 589415209580625930;
     static ref LEVEL_FINDER: Regex = Regex::new(r"\^(\d+\.\d+)$").unwrap();
     static ref TIMES: Mutex<HashMap<u64, DateTime<Utc>>> = Mutex::new(HashMap::new());
     static ref ROLES: HashMap<u64, f64> = {
         let mut roles = HashMap::new();
-        roles.insert(664070917801902093, 6.0); // ACE
-        roles.insert(717039238423642242, 100.0); // null
+        roles.insert(ACE.0, 6.0); // ACE
+        roles.insert(NULL.0, 100.0); // null
         roles
     };
 }
@@ -56,11 +59,16 @@ pub async fn ready(ctx: &Context) {
                             .add_roles(&ctx, &roles_to_add)
                             .await
                             .expect("Couldn't add roles");
-                    } else if !member.roles.contains(&664070917801902093.into()) // ACE
-                        && member.xp() >= 3.0
+                    } else if member.roles.contains(&*EH_ISTE)
+                        && (member.xp() < 3.0 || member.roles.contains(&*ACE))
                     {
                         member
-                            .add_role(&ctx, 763769069605224458) // Eh İşte
+                            .remove_role(&ctx, *EH_ISTE)
+                            .await
+                            .expect("Couldn't del role");
+                    } else if member.xp() >= 3.0 && !member.roles.contains(&*ACE) {
+                        member
+                            .add_role(&ctx, *EH_ISTE)
                             .await
                             .expect("Couldn't add role");
                     }
