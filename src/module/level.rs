@@ -96,33 +96,58 @@ pub async fn ready(ctx: &Context) {
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
-    let message = reaction.message(ctx).await;
-    if message.is_err() {
+    let message = match reaction.message(ctx).await {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+
+    if reaction.emoji != *super::clap::CLAP || reaction.user_id.unwrap() == message.author.id {
+        // clap.rs already deletes the clap
         return;
     }
 
-    let message = message.unwrap();
+    if let Ok(mut member) = ctx
+        .http
+        .get_member(
+            *reaction.guild_id.unwrap().as_u64(),
+            *message.author.id.as_u64(),
+        )
+        .await
+    {
+        member.xp_give(ctx.http.clone(), 2.0).await;
+    }
+}
 
-    if reaction.emoji != *super::clap::CLAP {
-        return;
-    } else if reaction.user_id.unwrap() == message.author.id {
-        reaction.delete(ctx).await.ok();
+pub async fn reaction_remove(ctx: &Context, reaction: &Reaction) {
+    let message = match reaction.message(ctx).await {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+
+    if reaction.emoji != *super::clap::CLAP || reaction.user_id.unwrap() == message.author.id {
         return;
     }
 
-    if let Some(mut member) = message.member(ctx).await {
-        member.xp_give(ctx.http.clone(), 0.35).await;
+    if let Ok(mut member) = ctx
+        .http
+        .get_member(
+            *reaction.guild_id.unwrap().as_u64(),
+            *message.author.id.as_u64(),
+        )
+        .await
+    {
+        member.xp_take(ctx.http.clone(), 2.0).await;
     }
 }
 
 pub async fn message(ctx: &Context, msg: &Message) {
-    if let Some(mut member) = msg.member(ctx).await {
+    if let Ok(mut member) = msg.member(ctx).await {
         member.xp_give(ctx.http.clone(), 0.1).await;
     }
 }
 
 pub async fn message_delete(ctx: &Context, _channel_id: ChannelId, message: Message) {
-    if let Some(mut member) = message.member(ctx).await {
+    if let Ok(mut member) = message.member(ctx).await {
         member.xp_take(ctx.http.clone(), 1.5).await;
     }
 }
@@ -136,7 +161,7 @@ pub async fn message_update(
     if let Some(old) = old {
         if let Some(new) = new {
             if is_deleted(&old, &new) {
-                if let Some(mut member) = new.member(ctx).await {
+                if let Ok(mut member) = new.member(ctx).await {
                     member.xp_take(ctx.http.clone(), 1.0).await;
                 }
             }

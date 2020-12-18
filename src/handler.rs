@@ -32,6 +32,14 @@ impl EventHandler for Handler {
         level::reaction_add(&ctx, &reaction).await;
     }
 
+    async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
+        if reaction.guild_id.is_none() || reaction.user(&ctx).await.expect("user").bot {
+            return;
+        }
+
+        level::reaction_remove(&ctx, &reaction).await;
+    }
+
     async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
         presence::ready(&ctx).await;
         level::ready(&ctx).await;
