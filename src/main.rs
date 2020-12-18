@@ -31,7 +31,7 @@ use tokio::signal::unix::{signal, SignalKind};
 
 #[tokio::main]
 async fn main() {
-    let mut client = Client::new(&env::var("ROBOTOKEN").expect("token"))
+    let mut client = Client::builder(&env::var("ROBOTOKEN").expect("token"))
         .event_handler(Handler)
         .framework(
             StandardFramework::new()

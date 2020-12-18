@@ -1,10 +1,10 @@
 use crate::module::{badword, blacklink, clap, faq, level, presence, selfmod, slowmode, undelete};
-use serenity::client::Context;
 use serenity::model::channel::{Message, Reaction};
 use serenity::model::gateway::Ready;
 use serenity::model::id::{ChannelId, MessageId};
 use serenity::prelude::EventHandler;
 use serenity::{async_trait, model::event::MessageUpdateEvent};
+use serenity::{client::Context, model::id::GuildId};
 
 pub struct Handler;
 
@@ -37,7 +37,13 @@ impl EventHandler for Handler {
         level::ready(&ctx).await;
     }
 
-    async fn message_delete(&self, ctx: Context, channel_id: ChannelId, message_id: MessageId) {
+    async fn message_delete(
+        &self,
+        ctx: Context,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        _guild_id: Option<GuildId>,
+    ) {
         let message = match ctx.cache.message(channel_id, message_id).await {
             Some(message) => message,
             None => {
