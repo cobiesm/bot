@@ -15,11 +15,22 @@ impl EventHandler for Handler {
             return;
         }
 
-        blacklink::message(&ctx, &new_message).await;
-        badword::message(&ctx, &new_message).await;
-        slowmode::message(&ctx, &new_message).await;
         faq::message(&ctx, &new_message).await;
-        level::message(&ctx, &new_message).await;
+
+        if !new_message
+            .member(&ctx)
+            .await
+            .unwrap()
+            .permissions(&ctx)
+            .await
+            .unwrap()
+            .administrator()
+        {
+            blacklink::message(&ctx, &new_message).await;
+            badword::message(&ctx, &new_message).await;
+            slowmode::message(&ctx, &new_message).await;
+            level::message(&ctx, &new_message).await;
+        }
     }
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
