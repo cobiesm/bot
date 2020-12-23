@@ -1,14 +1,11 @@
 use regex::Regex;
 use serenity::client::Context;
 use serenity::model::channel::Message;
+use strsim::normalized_damerau_levenshtein;
 
 lazy_static! {
-    static ref MATCHER: Regex = Regex::new(
-        r"(?ix)(
-        facebook | twitter | spotify | webtekno | onedio
-        ){1}\.[a-z]{2,4}\b(/[a-z0-9@:%\s+.~\#?&/=-]*)?"
-    )
-    .unwrap();
+    static ref MATCHER: Regex =
+        Regex::new(r"(?ix)(\w+){1}\.[a-z]{2,4}\b(/[a-z0-9@:%\s+.~\#?&/=-]*)?").unwrap();
 }
 
 pub async fn message(ctx: &Context, msg: &Message) {
@@ -25,10 +22,22 @@ pub async fn message(ctx: &Context, msg: &Message) {
                 .collect::<String>(),
         );
 
-        msg.reply(ctx, format!("neden {} linki paylaşıyorsun ki?", domain))
-            .await
-            .ok();
-        msg.author.dm(ctx, |pm| pm.content(&msg.content)).await.ok();
-        msg.delete(ctx).await.unwrap();
+        if let Some(black) = is_blacked(&domain) {
+            msg.reply_mention(ctx, format!("neden {} linki paylaşıyorsun ki?", black))
+                .await
+                .ok();
+            msg.author.dm(ctx, |pm| pm.content(&msg.content)).await.ok();
+            msg.delete(ctx).await.unwrap();
+        }
     }
+}
+
+fn is_blacked(domain: &str) -> Option<&str> {
+    for black in &["facebook", "twitter", "spotify", "webtekno", "onedio"] {
+        if normalized_damerau_levenshtein(domain, black) >= 0.5 {
+            return Some(black);
+        }
+    }
+
+    None
 }
