@@ -83,7 +83,7 @@ async fn after_hook(ctx: &Context, msg: &Message, _: &str, error: Result<(), Com
 
 #[hook]
 async fn dispatch_error_hook(_: &Context, _: &Message, error: DispatchError) {
-    println!("{:?}", error);
+    eprintln!("disp_err: {:?}", error);
 }
 
 async fn react_ok(ctx: &Context, msg: &Message) {
