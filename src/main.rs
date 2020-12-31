@@ -59,6 +59,7 @@ async fn main() {
             signal.recv().await.unwrap();
             println!("\nHele bi soluklanayım.");
             shard_manager.lock().await.shutdown_all().await;
+            std::process::exit(0);
         }
     });
 
