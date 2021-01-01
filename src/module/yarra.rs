@@ -1,4 +1,3 @@
-use futures::executor::block_on;
 use serenity::framework::standard::{macros::command, CommandError, CommandResult};
 use serenity::model::channel::Message;
 use serenity::prelude::Context;
@@ -17,7 +16,7 @@ pub async fn yarra(ctx: &Context, msg: &Message) -> CommandResult {
                     em.description(&format!(
                         "**{}, {} sana yarra diyor**",
                         msg.mentions.first().unwrap(),
-                        block_on(msg.member(&ctx)).unwrap(),
+                        msg.author,
                     ));
                 }
                 em.image("https://i.ibb.co/5sBvWHC/yarra.gif")
