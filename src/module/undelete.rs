@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-use futures::stream::{self, StreamExt};
 use serenity::client::Context;
 use serenity::model::id::ChannelId;
 use serenity::{http::AttachmentType, model::channel::Message, model::event::MessageUpdateEvent};
@@ -39,19 +38,30 @@ async fn undelete(ctx: &Context, message: Message) {
     .ok();
 
     if !message.attachments.is_empty() {
+        let r_client = reqwest::blocking::Client::builder()
+            .use_rustls_tls()
+            .build()
+            .unwrap();
+
         hook.channel_id
             .send_files(
                 &ctx,
-                stream::iter(&message.attachments)
-                    .then(|at| async move {
-                        AttachmentType::Bytes {
-                            data: at.download().await.unwrap().into(),
-                            filename: at.filename.clone(),
-                        }
+                message
+                    .attachments
+                    .iter()
+                    .map(|at| AttachmentType::Bytes {
+                        data: r_client
+                            .get(&at.proxy_url)
+                            .send()
+                            .unwrap()
+                            .bytes()
+                            .unwrap()
+                            .into_iter()
+                            .collect(),
+                        filename: at.filename.clone(),
                     })
-                    .collect::<Vec<_>>()
-                    .await,
-                |at| at.content(format!("^^{}", message.author)),
+                    .collect::<Vec<_>>(),
+                |at| at.content(format!("{}:", message.author)),
             )
             .await
             .ok();

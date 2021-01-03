@@ -31,7 +31,8 @@ pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
         Err(e) => return Err(CommandError::from(e)),
     };
 
-    let image_raw = match reqwest::get(&image_url).await {
+    let r_client = reqwest::Client::builder().use_rustls_tls().build().unwrap();
+    let image_raw = match r_client.get(&image_url).send().await {
         Ok(resp) => match resp.bytes().await {
             Ok(bytes) if bytes.len() <= 255_999 => bytes,
             Ok(_) => return Err(ERR_BIG.into()),
