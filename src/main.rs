@@ -36,7 +36,7 @@ async fn main() {
         .framework(
             StandardFramework::new()
                 .configure(|c| c.prefix(".").allow_dm(false))
-                .bucket("addemoji", |buc| buc.delay(43200))
+                .bucket("addemoji", |buc| buc.delay(43200).check(bucket_check))
                 .await
                 .bucket("fun", |buc| buc.delay(10))
                 .await
@@ -82,8 +82,24 @@ async fn after_hook(ctx: &Context, msg: &Message, _: &str, error: Result<(), Com
 }
 
 #[hook]
-async fn dispatch_error_hook(_: &Context, _: &Message, error: DispatchError) {
-    eprintln!("disp_err: {:?}", error);
+async fn dispatch_error_hook(ctx: &Context, msg: &Message, error: DispatchError) {
+    match error {
+        DispatchError::Ratelimited(info) if info.is_first_try => {
+            msg.reply(ctx, format!("{} saniye beklemen lazım", info.as_secs()))
+                .await
+                .ok();
+        }
+        _ => eprintln!("disp_err: {:?}", error),
+    }
+}
+
+#[hook]
+async fn bucket_check(_: &Context, msg: &Message) -> bool {
+    !msg.member
+        .as_ref()
+        .unwrap()
+        .roles
+        .contains(&589415787668701185.into())
 }
 
 async fn react_ok(ctx: &Context, msg: &Message) {
