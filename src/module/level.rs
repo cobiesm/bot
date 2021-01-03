@@ -279,10 +279,10 @@ impl WithLevel {
         }
 
         let time_diff = Local::now().timestamp_millis() - last_millis;
-        let half_day = 43200000;
+        let four_hours = 14400000;
 
-        if time_diff > half_day {
-            xp_new = (xp_new - time_diff as f64 / half_day as f64).max(0.0);
+        if time_diff > four_hours / 8 {
+            xp_new = (xp_new - time_diff as f64 / four_hours as f64).max(0.0);
         }
 
         let name = LEVEL_FINDER.replace(
