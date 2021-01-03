@@ -1,4 +1,3 @@
-use chrono::prelude::*;
 use serenity::client::Context;
 use serenity::model::id::ChannelId;
 use serenity::{http::AttachmentType, model::channel::Message, model::event::MessageUpdateEvent};
@@ -69,12 +68,7 @@ async fn undelete(ctx: &Context, message: Message) {
 }
 
 pub async fn message_delete(ctx: &Context, channel_id: ChannelId, message: Message) {
-    let tc = &Utc::now();
-    let tm = message.timestamp;
-    if message.author.bot
-        || tc.timestamp_millis() - tm.timestamp_millis() < 1500
-        || BLACKLIST.contains(channel_id.as_u64())
-    {
+    if message.author.bot || BLACKLIST.contains(channel_id.as_u64()) {
         return;
     }
 
