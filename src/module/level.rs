@@ -39,45 +39,32 @@ pub async fn ready(ctx: &Context) {
             let mut users_to_clean: Vec<u64> = vec![];
             for member in LEVELS.lock().await.values() {
                 let mut member = member.lock().await;
-                let mut roles_to_add: Vec<RoleId> = vec![];
-                let mut roles_to_del: Vec<RoleId> = vec![];
                 for (role, xp_req) in ROLES.iter() {
                     let role = RoleId { 0: *role };
                     if member.xp() >= *xp_req && !member.base.roles.contains(&role) {
-                        roles_to_add.push(role);
+                        member.base.add_role(&ctx, role).await.expect("add_role");
                     } else if member.xp() < *xp_req && member.base.roles.contains(&role) {
-                        roles_to_del.push(role);
+                        member.base.remove_role(&ctx, role).await.expect("del_role");
                     }
                 }
 
-                if !roles_to_add.is_empty() {
-                    member
-                        .base
-                        .add_roles(&ctx, &roles_to_add)
-                        .await
-                        .expect("Couldn't add roles");
-                } else if member.base.roles.contains(&*EH_ISTE)
+                if member.base.roles.contains(&*EH_ISTE)
                     && (member.xp() < 3.0 || member.base.roles.contains(&*ACE))
                 {
                     member
                         .base
                         .remove_role(&ctx, *EH_ISTE)
                         .await
-                        .expect("Couldn't del role");
-                } else if member.xp() >= 3.0 && !member.base.roles.contains(&*ACE) {
+                        .expect("del_role");
+                } else if member.base.roles.contains(&*EH_ISTE)
+                    && member.xp() >= 3.0
+                    && !member.base.roles.contains(&*ACE)
+                {
                     member
                         .base
                         .add_role(&ctx, *EH_ISTE)
                         .await
-                        .expect("Couldn't add role");
-                }
-
-                if !roles_to_del.is_empty() {
-                    member
-                        .base
-                        .remove_roles(&ctx, &roles_to_del)
-                        .await
-                        .expect("Couldn't del roles");
+                        .expect("add_role");
                 }
 
                 if member.enough_passed().await {
@@ -286,7 +273,7 @@ impl WithLevel {
         }
 
         let name = LEVEL_FINDER.replace(
-            name.as_str(),
+            &name,
             if xp_new > 0.0 {
                 format!("^{:.2}", xp_new)
             } else {

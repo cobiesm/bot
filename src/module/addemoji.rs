@@ -1,8 +1,6 @@
 use base64::encode;
 use serde_json::json;
-use serenity::framework::standard::{
-    macros::command, Args, CommandError, CommandResult, Delimiter,
-};
+use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
 use serenity::model::channel::Message;
 use serenity::prelude::Context;
 
@@ -18,9 +16,8 @@ static ERR_SMNAME: &str = "hafız az daha uzun isim girebilicen mi.";
 #[example = "yarra https://yarra.me/yarra.gif"]
 #[bucket = "addemoji"]
 #[aliases(emoji, emojiekle)]
-pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
-    let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
-    let name = match args.advance().single::<String>() {
+pub async fn addemoji(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let name = match args.single::<String>() {
         Ok(name) if name.len() > 1 => name,
         Ok(_) => return Err(ERR_SMNAME.into()),
         Err(e) => return Err(CommandError::from(e)),
@@ -43,8 +40,6 @@ pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
 
     let mut ext = String::from_utf8_lossy(&image_raw.slice(0..4).to_vec()).to_string();
 
-    println!("{:?}", image_raw);
-
     ext = match ext.as_str() {
         "GIF8" => "gif".into(),
         "�PNG" => "png".into(),
@@ -58,8 +53,13 @@ pub async fn addemoji(ctx: &Context, msg: &Message) -> CommandResult {
         "image": format!("data:image/{};base64,{}", ext, encode(image_raw))
     });
 
+    let guild_id = match msg.guild_id {
+        Some(id) => *id.as_u64(),
+        None => return Err(CommandError::from("Couldn't find guild_id")),
+    };
+
     ctx.http
-        .create_emoji(msg.guild_id.unwrap().into(), &emoji)
+        .create_emoji(guild_id, &emoji)
         .await
         .map_err(CommandError::from)
         .map(|_| ())

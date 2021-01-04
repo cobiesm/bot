@@ -17,13 +17,18 @@ impl EventHandler for Handler {
 
         faq::message(&ctx, &new_message).await;
 
-        if !new_message
-            .member(&ctx)
-            .await
-            .unwrap()
+        let member = match new_message.member(&ctx).await {
+            Ok(member) => member,
+            Err(e) => {
+                eprintln!("Couldn't get the member because {}.", e);
+                return;
+            }
+        };
+
+        if !member
             .permissions(&ctx)
             .await
-            .unwrap()
+            .expect("permissions for new message's member in cache")
             .administrator()
         {
             blacklink::message(&ctx, &new_message).await;
@@ -63,11 +68,11 @@ impl EventHandler for Handler {
         message_id: MessageId,
         _guild_id: Option<GuildId>,
     ) {
-        let message = match ctx.cache.message(channel_id, message_id).await {
-            Some(message) => message,
-            None => {
-                return;
-            }
+        let message = if let Some(message) = ctx.cache.message(channel_id, message_id).await {
+            message
+        } else {
+            eprintln!("Could not find the message in cache.");
+            return;
         };
 
         if message.is_private() || message.is_own(&ctx).await {

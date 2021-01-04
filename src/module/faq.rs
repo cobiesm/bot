@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use regex::Regex;
-use serenity::model::channel::Message;
 use serenity::{client::Context, model::guild::Member, model::id::ChannelId};
+use serenity::{model::channel::Message, Error};
 
 lazy_static! {
     static ref FAQS: Vec<Faq> = vec![
@@ -31,33 +31,48 @@ struct Faq {
 }
 
 pub async fn message(ctx: &Context, new_message: &Message) {
-    if new_message.author.bot {
-        return;
-    }
-
     for faq in FAQS.iter() {
         if faq.expected.is_match(&new_message.content)
             && (!faq.mentions
-                || new_message.mentions_user(&ctx.http.get_current_user().await.unwrap().into()))
+                || new_message.mentions_user(
+                    &ctx.http
+                        .get_current_user()
+                        .await
+                        .unwrap() // SAFETY: Current user should always be available.
+                        .into(),
+                ))
         {
             let outcome = &faq.outcome;
-            let member = new_message.member(ctx).await.unwrap().clone();
+            let member = match new_message.member(ctx).await {
+                Ok(member) => member,
+                Err(e) => {
+                    eprintln!("Couldn't get member of the message because {}.", e);
+                    return;
+                }
+            };
             let channel = new_message.channel_id;
             if !outcome.contains(';') {
-                reply(ctx, &member, channel, &faq.outcome).await;
+                reply(ctx, &member, channel, &faq.outcome).await.ok();
                 break;
             }
 
-            let answers = outcome.split(';');
             let ctx = ctx.clone();
             tokio::spawn(async move {
-                let mut message = reply(
+                let answers = outcome.split(';');
+                let mut message = match reply(
                     &ctx,
                     &member,
                     channel,
-                    answers.clone().rev().last().unwrap(),
+                    answers.clone().rev().last().unwrap(), // SAFETY: First element always exist
                 )
-                .await;
+                .await
+                {
+                    Ok(message) => message,
+                    Err(e) => {
+                        eprintln!("Couldn't reply because {}.", e);
+                        return;
+                    }
+                };
                 for answer in answers.skip(1) {
                     channel.broadcast_typing(&ctx).await.ok();
                     std::thread::sleep(Duration::from_secs(
@@ -73,9 +88,13 @@ pub async fn message(ctx: &Context, new_message: &Message) {
     }
 }
 
-pub async fn reply(ctx: &Context, member: &Member, channel: ChannelId, answer: &str) -> Message {
+pub async fn reply(
+    ctx: &Context,
+    member: &Member,
+    channel: ChannelId,
+    answer: &str,
+) -> Result<Message, Error> {
     channel
         .send_message(ctx, |b| b.content(format!("{}, {}", member, answer)))
         .await
-        .unwrap()
 }

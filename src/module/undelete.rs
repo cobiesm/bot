@@ -29,9 +29,14 @@ async fn undelete(ctx: &Context, message: Message) {
         .map_or(String::from("bilinmeyen"), |name| name);
 
     hook.execute(&ctx, false, |w| {
-        w.content(content)
-            .username(format!("{}@{}", message.author.name, channel_name))
-            .avatar_url(message.author.avatar_url().unwrap())
+        let w = w
+            .content(content)
+            .username(format!("{}@{}", message.author.name, channel_name));
+        if let Some(avatar) = message.author.avatar_url() {
+            w.avatar_url(avatar);
+        }
+
+        w
     })
     .await
     .ok();

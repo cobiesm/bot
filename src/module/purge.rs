@@ -1,14 +1,11 @@
-use serenity::framework::standard::{
-    macros::command, Args, CommandError, CommandResult, Delimiter,
-};
+use serenity::framework::standard::{macros::command, Args, CommandError, CommandResult};
 use serenity::model::channel::Message;
 use serenity::prelude::Context;
 
 #[command]
 #[num_args(1)]
-pub async fn purge(ctx: &Context, msg: &Message) -> CommandResult {
-    let mut args = Args::new(&msg.content, &[Delimiter::Single(' ')]);
-    let amount = match args.advance().single::<u64>() {
+pub async fn purge(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let amount = match args.single::<u64>() {
         Ok(num) => num,
         Err(_) => {
             return Err(CommandError::from("girdiğiniz sayı geri verildi."));

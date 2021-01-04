@@ -1,36 +1,31 @@
 use serenity::client::Context;
 use serenity::http::Http;
 use serenity::model::channel::{Message, Reaction, ReactionType};
-use std::collections::HashMap;
 use tokio::sync::Mutex;
 
 static Q_CHANNELID: u64 = 670984869941346304;
 
 lazy_static! {
-    static ref TASKS: Mutex<HashMap<u64, bool>> = Mutex::new(HashMap::new());
+    static ref TASKS: Mutex<Vec<u64>> = Mutex::new(Vec::new());
     pub static ref CLAP: ReactionType = ReactionType::Unicode("👏".into());
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
-    let message = reaction.message(ctx).await;
-    if message.is_err() {
-        return;
-    }
-
-    let message = message.unwrap();
+    let message = match reaction.message(ctx).await {
+        Ok(m) => m,
+        Err(_) => return,
+    };
 
     if reaction.emoji != *CLAP {
         return;
-    } else if reaction.user_id.unwrap() == message.author.id {
+    } else if reaction.user_id == Some(message.author.id) {
         reaction.delete(ctx).await.ok();
         return;
     }
 
-    let reactions = calc_reactions(ctx, &message).await;
-
-    if reactions == 5 {
+    if calc_reactions(ctx, &message).await == 5 {
         for task in TASKS.lock().await.iter() {
-            if task.0 == message.id.as_u64() && *task.1 {
+            if task == message.id.as_u64() {
                 return;
             }
         }
@@ -38,22 +33,24 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         return;
     }
 
-    message.channel_id.broadcast_typing(ctx).await.unwrap();
+    message.channel_id.broadcast_typing(ctx).await.ok();
 
     let http = ctx.http.clone();
 
     tokio::spawn(async move {
         let mut tasks = TASKS.lock().await;
-        tasks.insert(*message.id.as_u64(), true);
+        tasks.push(*message.id.as_u64());
+        drop(tasks);
         tokio::time::delay_for(std::time::Duration::from_secs(5 * 60)).await;
         let reactions = calc_reactions(&http, &message).await;
 
-        let channel = http
-            .get_channel(Q_CHANNELID)
-            .await
-            .unwrap()
-            .guild()
-            .unwrap();
+        let channel = if let Ok(channel) = http.get_channel(Q_CHANNELID).await {
+            channel.guild().unwrap() // SAFETY: Handler assures that the message is from a guild
+        } else {
+            eprintln!("Couldn't get the channel with its id.");
+            return;
+        };
+
         let author = message.author.clone();
 
         channel
@@ -73,7 +70,16 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
             })
             .await
             .ok();
-        tasks.insert(*message.id.as_u64(), false);
+        let mut tasks = TASKS.lock().await;
+        match tasks
+            .iter()
+            .position(|message_id| message_id == message.id.as_u64())
+        {
+            Some(task) => {
+                tasks.remove(task);
+            }
+            None => eprintln!("Couldn't find the task, somethings worng."),
+        };
     });
 }
 
@@ -81,6 +87,6 @@ async fn calc_reactions(http: impl AsRef<Http> + Send + Sync, message: &Message)
     message
         .reaction_users(http, CLAP.clone(), None, None)
         .await
-        .unwrap()
+        .unwrap_or_else(|_| Vec::new())
         .len()
 }
