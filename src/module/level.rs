@@ -142,7 +142,7 @@ pub async fn message(ctx: &Context, msg: &Message) {
             .await
             .lock()
             .await
-            .xp_give(ctx.http.clone(), 0.1)
+            .xp_give(ctx.http.clone(), 0.05)
             .await;
     }
 }
