@@ -23,7 +23,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         return;
     }
 
-    if calc_reactions(ctx, &message).await == 5 {
+    if calc_reactions(ctx, &message).await == 3 {
         for task in TASKS.lock().await.iter() {
             if task == message.id.as_u64() {
                 return;
