@@ -5,6 +5,7 @@ use serenity::model::id::{ChannelId, MessageId};
 use serenity::prelude::EventHandler;
 use serenity::{async_trait, model::event::MessageUpdateEvent};
 use serenity::{client::Context, model::id::GuildId};
+use tokio::join;
 
 pub struct Handler;
 
@@ -31,10 +32,12 @@ impl EventHandler for Handler {
             .expect("permissions for new message's member in cache")
             .administrator()
         {
-            blacklink::message(&ctx, &new_message).await;
-            badword::message(&ctx, &new_message).await;
-            slowmode::message(&ctx, &new_message).await;
-            level::message(&ctx, &new_message).await;
+            join!(
+                blacklink::message(&ctx, &new_message),
+                badword::message(&ctx, &new_message),
+                slowmode::message(&ctx, &new_message),
+                level::message(&ctx, &new_message)
+            );
         }
     }
 
@@ -43,9 +46,11 @@ impl EventHandler for Handler {
             return;
         }
 
-        selfmod::reaction_add(&ctx, &reaction).await;
-        clap::reaction_add(&ctx, &reaction).await;
-        level::reaction_add(&ctx, &reaction).await;
+        join!(
+            selfmod::reaction_add(&ctx, &reaction),
+            clap::reaction_add(&ctx, &reaction),
+            level::reaction_add(&ctx, &reaction)
+        );
     }
 
     async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
@@ -57,8 +62,7 @@ impl EventHandler for Handler {
     }
 
     async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
-        presence::ready(&ctx).await;
-        level::ready(&ctx).await;
+        join!(presence::ready(&ctx), level::ready(&ctx));
     }
 
     async fn message_delete(
@@ -79,8 +83,10 @@ impl EventHandler for Handler {
             return;
         }
 
-        undelete::message_delete(&ctx, channel_id, message.clone()).await;
-        level::message_delete(&ctx, channel_id, message.clone()).await;
+        join!(
+            undelete::message_delete(&ctx, channel_id, message.clone()),
+            level::message_delete(&ctx, channel_id, message.clone())
+        );
     }
 
     async fn message_update(
@@ -96,7 +102,9 @@ impl EventHandler for Handler {
             }
         }
 
-        undelete::message_update(&ctx, old.clone(), new.clone(), event.clone()).await;
-        level::message_update(&ctx, old.clone(), new.clone(), event.clone()).await;
+        join!(
+            undelete::message_update(&ctx, old.clone(), new.clone(), event.clone()),
+            level::message_update(&ctx, old.clone(), new.clone(), event.clone())
+        );
     }
 }
