@@ -38,7 +38,7 @@ pub async fn message(ctx: &Context, msg: &Message) {
 
 fn is_blacked(domain: &str) -> Option<&str> {
     for black in &["Facebook", "Twitter", "Spotify", "WebTekno", "Onedio"] {
-        if normalized_damerau_levenshtein(domain, black) >= 0.5 {
+        if normalized_damerau_levenshtein(domain, black) >= 0.55 {
             return Some(black);
         }
     }
