@@ -14,27 +14,25 @@ pub async fn message(ctx: &Context, msg: &Message) {
         None => return,
     };
 
-    if msg.guild_id.is_some() && !msg.author.bot {
-        let domain = captures
-            .get(1)
-            .unwrap() // SAFETY: Capture group always exist.
-            .as_str()
-            .to_owned();
+    let domain = captures
+        .get(1)
+        .unwrap() // SAFETY: Capture group always exist.
+        .as_str()
+        .to_owned();
 
-        if let Some(black) = is_blacked(&domain) {
-            msg.reply_mention(ctx, format!("neden {} linki paylaşıyorsun ki?", black))
-                .await
-                .ok();
-            msg.author.dm(ctx, |pm| pm.content(&msg.content)).await.ok();
-            match msg.delete(ctx).await {
-                Ok(()) => (),
-                Err(e) => {
-                    msg.reply(&ctx, format!("Bu mesajı silemiyorum çünkü {}", e))
-                        .await
-                        .ok();
-                }
-            };
-        }
+    if let Some(black) = is_blacked(&domain) {
+        msg.reply_mention(ctx, format!("neden {} linki paylaşıyorsun ki?", black))
+            .await
+            .ok();
+        msg.author.dm(ctx, |pm| pm.content(&msg.content)).await.ok();
+        match msg.delete(ctx).await {
+            Ok(()) => (),
+            Err(e) => {
+                msg.reply(&ctx, format!("Bu mesajı silemiyorum çünkü {}", e))
+                    .await
+                    .ok();
+            }
+        };
     }
 }
 
