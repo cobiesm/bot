@@ -18,12 +18,19 @@ impl EventHandler for Handler {
 
         faq::message(&ctx, &new_message).await;
 
-        let member = match new_message.member(&ctx).await {
-            Ok(member) => member,
-            Err(e) => {
-                eprintln!("Couldn't get the member because {}.", e);
-                return;
-            }
+        let mut i = 1;
+        let member = loop {
+            match new_message.member(&ctx).await {
+                Ok(member) => break member,
+                Err(e) => {
+                    if i == 10 {
+                        panic!("Couldn't get the member because {}.", e);
+                    } else {
+                        println!("Trying to get member {}", i);
+                        i += 1;
+                    }
+                }
+            };
         };
 
         if !member
