@@ -1,10 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use async_recursion::async_recursion;
-use chrono::{prelude::*, Duration};
+use chrono::Utc;
 use regex::Regex;
 use serenity::{
-    client::Context,
+    client::{Cache, Context},
     http::Http,
     model::{
         channel::{Message, Reaction},
@@ -16,6 +15,9 @@ use serenity::{
 use tokio::sync::Mutex;
 
 use super::undelete::is_deleted;
+
+static COOLDOWN_SPAM: i64 = 5000;
+static COOLDOWN_AFK: i64 = 14400000;
 
 lazy_static! {
     static ref EH_ISTE: RoleId = RoleId {
@@ -29,7 +31,6 @@ lazy_static! {
     };
     static ref GUILD_ID: u64 = 589415209580625930;
     static ref LEVEL_FINDER: Regex = Regex::new(r"\^(\d+\.\d+)$").unwrap();
-    static ref LEVELS: Mutex<HashMap<u64, Arc<Mutex<WithLevel>>>> = Mutex::new(HashMap::new());
     static ref ROLES: HashMap<u64, (f64, bool)> = {
         let mut roles = HashMap::new();
         roles.insert(EH_ISTE.0, (5.0, true));
@@ -37,19 +38,35 @@ lazy_static! {
         roles.insert(NULL.0, (100.0, false));
         roles
     };
+    static ref TIMES: Mutex<HashMap<u64, i64>> = Mutex::new(HashMap::new());
+    static ref LOCKS: Mutex<HashMap<u64, Arc<Mutex<MemberWithLevel>>>> = Mutex::new(HashMap::new());
 }
 
 pub async fn ready(ctx: &Context) {
     let ctx = ctx.clone();
     tokio::spawn(async move {
         loop {
-            let mut levels = LEVELS.lock().await;
-            for member in levels.values() {
-                let mut member = member.lock().await;
-                member.xp_push(ctx.http.clone()).await;
+            let members = ctx
+                .http
+                .get_guild_members(*GUILD_ID, Some(1000), None)
+                .await
+                .unwrap(); // SAFETY: Don't really care if it fails occasionally.
 
-                let mut mbase = member.base.clone();
-                let mroles = mbase.roles.clone();
+            for mut member in members {
+                let lmember = MemberWithLevel {
+                    member: member.clone(),
+                };
+
+                let time_diff = lmember.ms_after_last_real_message(&ctx).await;
+                if time_diff > COOLDOWN_AFK / 8 {
+                    let lock = find_member(&member).await;
+                    let mut lmember = lock.lock().await;
+                    lmember
+                        .xp_take(&ctx, time_diff as f64 / COOLDOWN_AFK as f64)
+                        .await;
+                }
+
+                let mroles = member.roles.clone();
 
                 for _ in 0..2 {
                     let add = ROLES
@@ -59,16 +76,16 @@ pub async fn ready(ctx: &Context) {
                             let alone = role.1 .1;
                             let role = RoleId { 0: *role.0 };
                             if !mroles.contains(&role)
-                                && member.current_xp() >= xp_req
+                                && lmember.xp_current() >= xp_req
                                 && (!alone || !mroles.contains(&*ACE))
                             {
-                                Some(RoleId { 0: role.0 })
+                                Some(role)
                             } else {
                                 None
                             }
                         })
                         .collect::<Vec<RoleId>>();
-                    mbase.add_roles(&ctx, &add).await.expect("add_roles");
+                    member.add_roles(&ctx, &add).await.expect("add_roles");
 
                     let del = ROLES
                         .iter()
@@ -77,24 +94,47 @@ pub async fn ready(ctx: &Context) {
                             let alone = role.1 .1;
                             let role = RoleId { 0: *role.0 };
                             if mroles.contains(&role)
-                                && (member.current_xp() < xp_req
+                                && (lmember.xp_current() < xp_req
                                     || (alone && mroles.contains(&*ACE)))
                             {
-                                Some(RoleId { 0: role.0 })
+                                Some(role)
                             } else {
                                 None
                             }
                         })
                         .collect::<Vec<RoleId>>();
-                    mbase.remove_roles(&ctx, &del).await.expect("rm_roles");
+                    member.remove_roles(&ctx, &del).await.expect("rm_roles");
+                }
+
+                let lock = find_member(&member).await;
+                let lmember = lock.lock().await;
+                if lmember.enough_passed().await {
+                    let uid = member.user.id.as_u64();
+                    LOCKS.lock().await.remove(uid);
+                    TIMES.lock().await.remove(uid);
                 }
             }
-
-            levels.clear();
-            drop(levels);
-            std::thread::sleep(std::time::Duration::from_secs(10));
+            std::thread::sleep(Duration::from_secs(60 * 5));
         }
     });
+}
+
+pub async fn message(ctx: &Context, msg: &Message) {
+    if let Ok(member) = msg.member(ctx).await {
+        let lock = find_member(&member).await;
+        let mut lmember = lock.lock().await;
+
+        if lmember.enough_passed().await {
+            lmember.xp_give(ctx, 0.05).await;
+        } else {
+            lmember.xp_take(ctx, 0.015).await;
+        }
+
+        TIMES
+            .lock()
+            .await
+            .insert(*member.user.id.as_u64(), Utc::now().timestamp_millis());
+    }
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
@@ -103,7 +143,9 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         Err(_) => return,
     };
 
-    if reaction.emoji != *super::clap::CLAP || reaction.user_id.unwrap() == message.author.id {
+    if reaction.emoji != *super::clap::CLAP
+        || reaction.user_id.expect("Reaction User") == message.author.id
+    {
         // clap.rs already deletes the clap
         return;
     }
@@ -111,12 +153,14 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     if let Ok(member) = ctx
         .http
         .get_member(
-            *reaction.guild_id.unwrap().as_u64(),
+            *reaction.guild_id.expect("Reaction Guild").as_u64(),
             *message.author.id.as_u64(),
         )
         .await
     {
-        find_member(member).await.lock().await.xp_give(2.0);
+        let lock = find_member(&member).await;
+        let mut lmember = lock.lock().await;
+        lmember.xp_give(ctx, 2.0).await;
     }
 }
 
@@ -126,37 +170,31 @@ pub async fn reaction_remove(ctx: &Context, reaction: &Reaction) {
         Err(_) => return,
     };
 
-    if reaction.emoji != *super::clap::CLAP || reaction.user_id.unwrap() == message.author.id {
+    if reaction.emoji != *super::clap::CLAP
+        || reaction.user_id.expect("Reaction User") == message.author.id
+    {
         return;
     }
 
     if let Ok(member) = ctx
         .http
         .get_member(
-            *reaction.guild_id.unwrap().as_u64(),
+            *reaction.guild_id.expect("Reaction Guild").as_u64(),
             *message.author.id.as_u64(),
         )
         .await
     {
-        find_member(member).await.lock().await.xp_take(2.0);
-    }
-}
-
-pub async fn message(ctx: &Context, msg: &Message) {
-    if let Ok(member) = msg.member(ctx).await {
-        let with_level = find_member(member).await;
-        let mut with_level = with_level.lock().await;
-        if with_level.enough_passed(ctx.http.clone()).await {
-            with_level.xp_give(0.05);
-        } else {
-            with_level.xp_take(0.015);
-        }
+        let lock = find_member(&member).await;
+        let mut lmember = lock.lock().await;
+        lmember.xp_take(ctx, 2.0).await;
     }
 }
 
 pub async fn message_delete(ctx: &Context, _channel_id: ChannelId, message: Message) {
     if let Ok(member) = message.member(ctx).await {
-        find_member(member).await.lock().await.xp_take(1.5);
+        let lock = find_member(&member).await;
+        let mut lmember = lock.lock().await;
+        lmember.xp_take(ctx, 1.5).await;
     }
 }
 
@@ -170,110 +208,84 @@ pub async fn message_update(
         if let Some(new) = new {
             if is_deleted(&old, &new) {
                 if let Ok(member) = new.member(ctx).await {
-                    find_member(member).await.lock().await.xp_take(1.0);
+                    let lock = find_member(&member).await;
+                    let mut lmember = lock.lock().await;
+                    lmember.xp_take(ctx, 1.0).await;
                 }
             }
         }
     }
 }
 
-#[async_recursion]
-async fn find_member(base: Member) -> Arc<Mutex<WithLevel>> {
-    let mut levels = LEVELS.lock().await;
-    if let Some(member) = levels.clone().get(base.user.id.as_u64()) {
-        drop(levels);
-        member.clone()
+async fn find_member(member: &Member) -> Arc<Mutex<MemberWithLevel>> {
+    let mut locks = LOCKS.lock().await;
+
+    #[allow(clippy::option_if_let_else)]
+    if let Some(lock) = locks.get(member.user.id.as_u64()) {
+        lock.clone()
     } else {
-        levels.insert(
-            *base.user.id.as_u64(),
-            Arc::new(Mutex::new(WithLevel::new(base.clone()))),
+        locks.insert(
+            *member.user.id.as_u64(),
+            Arc::new(Mutex::new(MemberWithLevel {
+                member: member.clone(),
+            })),
         );
-        drop(levels);
-        find_member(base).await
+        locks.get(member.user.id.as_u64()).unwrap().clone()
     }
 }
 
-struct WithLevel {
-    base: Member,
-    xp_to_give: f64,
+struct MemberWithLevel {
+    member: Member,
 }
 
-impl WithLevel {
-    const fn new(base: Member) -> Self {
-        Self {
-            base,
-            xp_to_give: 0.0,
-        }
-    }
-
-    async fn time_after_last_message(&self, http: Arc<Http>) -> i64 {
-        let mut last_millis = 0;
-
-        for val in self.base.guild_id.channels(&http).await.unwrap().values() {
-            if let Ok(mes) = val.messages(&http, |buil| buil.limit(1)).await {
-                if let Some(mes) = mes.first() {
-                    let millis = mes.timestamp.timestamp_millis();
-                    if millis.max(last_millis) == millis {
-                        last_millis = mes.timestamp.timestamp_millis();
-                    }
-                }
-            };
-        }
+impl MemberWithLevel {
+    async fn ms_after_last_message(&self) -> i64 {
+        let times = TIMES.lock().await;
+        let last_millis = times.get(self.member.user.id.as_u64()).unwrap_or(&0);
 
         Utc::now().timestamp_millis() - last_millis
     }
 
-    async fn enough_passed(&self, http: Arc<Http>) -> bool {
-        self.time_after_last_message(http).await > Duration::seconds(5).num_milliseconds()
+    async fn enough_passed(&self) -> bool {
+        self.ms_after_last_message().await > COOLDOWN_SPAM
     }
 
-    async fn update(&mut self, http: Arc<Http>) {
-        self.base = http
-            .get_member(*self.base.guild_id.as_u64(), *self.base.user.id.as_u64())
-            .await
-            .unwrap();
+    fn xp_current(&self) -> f64 {
+        LEVEL_FINDER
+            .captures(self.member.display_name().as_str())
+            .map_or(0.0, |captures| {
+                captures.get(1).unwrap().as_str().parse::<f64>().unwrap()
+            })
     }
 
-    fn current_xp(&self) -> f64 {
-        if LEVEL_FINDER.is_match(self.base.display_name().as_str()) {
-            LEVEL_FINDER
-                .captures(self.base.display_name().as_str())
-                .unwrap()
-                .get(1)
-                .unwrap()
-                .as_str()
-                .parse::<f64>()
-                .unwrap()
-        } else {
-            0.0
+    async fn xp_give<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
+        &mut self,
+        cache_http: T,
+        amount: f64,
+    ) {
+        if (0.0..0.005).contains(&amount) {
+            return;
         }
-    }
 
-    async fn xp_push(&mut self, http: Arc<Http>) {
         #[cfg(debug_assertions)]
-        println!(
-            "Giving {} XP to {}.",
-            self.xp_to_give,
-            &self.base.distinct(),
-        );
+        println!("Giving {} XP to {}.", amount, &self.member.distinct());
 
-        self.update(http.clone()).await;
+        self.member = AsRef::<Http>::as_ref(&cache_http)
+            .get_member(
+                *self.member.guild_id.as_u64(),
+                *self.member.user.id.as_u64(),
+            )
+            .await
+            .expect("Member");
+        let mut name = self.member.display_name().as_ref().clone();
 
-        let mut name = String::new();
-        name.push_str(self.base.display_name().as_str());
-
-        if !LEVEL_FINDER.is_match(name.as_str()) {
+        if !LEVEL_FINDER.is_match(&name) {
             name.push_str(" ^0.0");
         }
 
-        let mut xp_new = (self.current_xp() + self.xp_to_give).max(0.0);
+        let mut xp_new = self.xp_current() + amount;
 
-        let time_diff = self.time_after_last_message(http.clone()).await;
-        let four_hours = 14400000;
-
-        if time_diff > four_hours / 8 {
-            xp_new = (xp_new - time_diff as f64 / four_hours as f64).max(0.0);
-        }
+        xp_new = xp_new.max(0.0);
 
         let name = LEVEL_FINDER.replace(
             &name,
@@ -285,15 +297,41 @@ impl WithLevel {
             .as_str(),
         );
 
-        self.base.edit(http, |e| e.nickname(name)).await.ok();
-        self.xp_to_give = 0.0;
+        self.member
+            .edit(cache_http, |e| e.nickname(name))
+            .await
+            .ok();
     }
 
-    fn xp_give(&mut self, amount: f64) {
-        self.xp_to_give += amount;
+    async fn xp_take<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
+        &mut self,
+        cache_http: T,
+        amount: f64,
+    ) {
+        self.xp_give(cache_http, -amount).await;
     }
 
-    fn xp_take(&mut self, amount: f64) {
-        self.xp_give(-amount);
+    async fn ms_after_last_real_message<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
+        &self,
+        cache_http: T,
+    ) -> i64 {
+        let mut last_millis = 0;
+
+        for val in self
+            .member
+            .guild_id
+            .channels(&cache_http)
+            .await
+            .unwrap()
+            .values()
+        {
+            if let Ok(mes) = val.messages(&cache_http, |buil| buil.limit(1)).await {
+                if let Some(mes) = mes.first() {
+                    last_millis = last_millis.max(mes.timestamp.timestamp_millis());
+                }
+            }
+        }
+
+        Utc::now().timestamp_millis() - last_millis
     }
 }
