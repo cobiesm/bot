@@ -19,6 +19,12 @@ use super::undelete::is_deleted;
 static COOLDOWN_SPAM: i64 = 5000;
 static COOLDOWN_AFK: i64 = 14400000;
 
+static GIVE_MESSAGE: f64 = 0.05;
+static TAKE_MESSAGE: f64 = 0.01;
+static GIVE_REACTION: f64 = 2.0;
+static TAKE_DELETE: f64 = 1.5;
+static TAKE_EDIT: f64 = 1.0;
+
 lazy_static! {
     static ref EH_ISTE: RoleId = RoleId {
         0: 763769069605224458
@@ -125,9 +131,9 @@ pub async fn message(ctx: &Context, msg: &Message) {
         let mut lmember = lock.lock().await;
 
         if lmember.enough_passed().await {
-            lmember.xp_give(ctx, 0.05).await;
+            lmember.xp_give(ctx, GIVE_MESSAGE).await;
         } else {
-            lmember.xp_take(ctx, 0.015).await;
+            lmember.xp_take(ctx, TAKE_MESSAGE).await;
         }
 
         TIMES
@@ -160,7 +166,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     {
         let lock = find_member(&member).await;
         let mut lmember = lock.lock().await;
-        lmember.xp_give(ctx, 2.0).await;
+        lmember.xp_give(ctx, GIVE_REACTION).await;
     }
 }
 
@@ -186,7 +192,7 @@ pub async fn reaction_remove(ctx: &Context, reaction: &Reaction) {
     {
         let lock = find_member(&member).await;
         let mut lmember = lock.lock().await;
-        lmember.xp_take(ctx, 2.0).await;
+        lmember.xp_take(ctx, GIVE_REACTION).await;
     }
 }
 
@@ -194,7 +200,7 @@ pub async fn message_delete(ctx: &Context, _channel_id: ChannelId, message: Mess
     if let Ok(member) = message.member(ctx).await {
         let lock = find_member(&member).await;
         let mut lmember = lock.lock().await;
-        lmember.xp_take(ctx, 1.5).await;
+        lmember.xp_take(ctx, TAKE_DELETE).await;
     }
 }
 
@@ -210,7 +216,7 @@ pub async fn message_update(
                 if let Ok(member) = new.member(ctx).await {
                     let lock = find_member(&member).await;
                     let mut lmember = lock.lock().await;
-                    lmember.xp_take(ctx, 1.0).await;
+                    lmember.xp_take(ctx, TAKE_EDIT).await;
                 }
             }
         }
