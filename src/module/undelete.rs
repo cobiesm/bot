@@ -88,7 +88,7 @@ pub async fn message_update(
 ) {
     if let Some(old) = old {
         if let Some(new) = new {
-            if is_deleted(&old, &new) {
+            if (!new.attachments.is_empty() || new.content.len() > 3) && is_deleted(&old, &new) {
                 undelete(ctx, old).await;
             }
         }
