@@ -61,6 +61,7 @@ pub async fn ready(ctx: &Context) {
             for mut member in members {
                 let lmember = MemberWithLevel {
                     member: member.clone(),
+                    xp: None,
                 };
 
                 let time_diff = lmember.ms_after_last_real_message(&ctx).await;
@@ -234,6 +235,7 @@ async fn find_member(member: &Member) -> Arc<Mutex<MemberWithLevel>> {
             *member.user.id.as_u64(),
             Arc::new(Mutex::new(MemberWithLevel {
                 member: member.clone(),
+                xp: None,
             })),
         );
         locks.get(member.user.id.as_u64()).unwrap().clone()
@@ -242,6 +244,7 @@ async fn find_member(member: &Member) -> Arc<Mutex<MemberWithLevel>> {
 
 struct MemberWithLevel {
     member: Member,
+    xp: Option<f64>,
 }
 
 impl MemberWithLevel {
@@ -257,18 +260,19 @@ impl MemberWithLevel {
     }
 
     fn xp_current(&self) -> f64 {
-        LEVEL_FINDER
-            .captures(self.member.display_name().as_str())
-            .map_or(0.0, |captures| {
-                captures.get(1).unwrap().as_str().parse::<f64>().unwrap()
-            })
+        self.xp.map_or_else(
+            || {
+                LEVEL_FINDER
+                    .captures(self.member.display_name().as_str())
+                    .map_or(0.0, |captures| {
+                        captures.get(1).unwrap().as_str().parse::<f64>().unwrap()
+                    })
+            },
+            |xp| xp,
+        )
     }
 
-    async fn xp_give<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
-        &mut self,
-        cache_http: T,
-        amount: f64,
-    ) {
+    async fn xp_give<T: AsRef<Http> + Sync + Send>(&mut self, http: T, amount: f64) {
         if (0.0..0.005).contains(&amount) {
             return;
         }
@@ -276,13 +280,6 @@ impl MemberWithLevel {
         #[cfg(debug_assertions)]
         println!("Giving {} XP to {}.", amount, &self.member.distinct());
 
-        self.member = AsRef::<Http>::as_ref(&cache_http)
-            .get_member(
-                *self.member.guild_id.as_u64(),
-                *self.member.user.id.as_u64(),
-            )
-            .await
-            .expect("Member");
         let mut name = self.member.display_name().as_ref().clone();
 
         if !LEVEL_FINDER.is_match(&name) {
@@ -303,10 +300,8 @@ impl MemberWithLevel {
             .as_str(),
         );
 
-        self.member
-            .edit(cache_http, |e| e.nickname(name))
-            .await
-            .ok();
+        self.member.edit(http, |e| e.nickname(name)).await.ok();
+        self.xp = Some(xp_new);
     }
 
     async fn xp_take<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
