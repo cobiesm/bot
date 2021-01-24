@@ -1,6 +1,6 @@
 use regex::Regex;
-use serenity::client::Context;
 use serenity::model::channel::Message;
+use serenity::{client::Context, model::event::MessageUpdateEvent};
 use strsim::normalized_damerau_levenshtein;
 
 lazy_static! {
@@ -33,6 +33,17 @@ pub async fn message(ctx: &Context, msg: &Message) {
                     .ok();
             }
         };
+    }
+}
+
+pub async fn message_update(
+    ctx: &Context,
+    _old: Option<Message>,
+    new: Option<Message>,
+    _event: MessageUpdateEvent,
+) {
+    if let Some(new) = new {
+        message(ctx, &new).await;
     }
 }
 

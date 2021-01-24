@@ -111,7 +111,8 @@ impl EventHandler for Handler {
 
         join!(
             undelete::message_update(&ctx, old.clone(), new.clone(), event.clone()),
-            level::message_update(&ctx, old.clone(), new.clone(), event.clone())
+            level::message_update(&ctx, old.clone(), new.clone(), event.clone()),
+            blacklink::message_update(&ctx, old.clone(), new.clone(), event.clone()),
         );
     }
 }
