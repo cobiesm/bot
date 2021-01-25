@@ -64,14 +64,17 @@ pub async fn ready(ctx: &Context) {
                     xp: None,
                 };
 
-                let time_diff = lmember.ms_after_last_real_message(&ctx).await;
-                if time_diff > COOLDOWN_AFK / 8 {
-                    let lock = find_member(&member).await;
-                    let mut lmember = lock.lock().await;
-                    lmember
-                        .xp_take(&ctx, time_diff as f64 / COOLDOWN_AFK as f64)
-                        .await;
-                }
+                // TODO: This is being repeated until member becomes unafk but until then we take
+                // all their XPs.
+                // ------------------------------------------------------------------------------
+                //let time_diff = lmember.ms_after_last_real_message(&ctx).await;
+                //if time_diff > COOLDOWN_AFK / 8 {
+                //let lock = find_member(&ctx, member.user.id).await;
+                //let mut lmember = lock.lock().await;
+                //lmember
+                //.xp_take(&ctx, time_diff as f64 / COOLDOWN_AFK as f64)
+                //.await;
+                //}
 
                 let mroles = member.roles.clone();
 
