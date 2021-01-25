@@ -9,7 +9,7 @@ use serenity::{
         channel::{Message, Reaction},
         event::MessageUpdateEvent,
         guild::Member,
-        id::{ChannelId, RoleId},
+        id::{ChannelId, RoleId, UserId},
     },
 };
 use tokio::sync::Mutex;
@@ -116,7 +116,7 @@ pub async fn ready(ctx: &Context) {
                     member.remove_roles(&ctx, &del).await.expect("rm_roles");
                 }
 
-                let lock = find_member(&member).await;
+                let lock = find_member(&ctx, member.user.id).await;
                 let lmember = lock.lock().await;
                 if lmember.enough_passed().await {
                     let uid = member.user.id.as_u64();
@@ -130,21 +130,17 @@ pub async fn ready(ctx: &Context) {
 }
 
 pub async fn message(ctx: &Context, msg: &Message) {
-    if let Ok(member) = msg.member(ctx).await {
-        let lock = find_member(&member).await;
-        let mut lmember = lock.lock().await;
-
-        if lmember.enough_passed().await {
-            lmember.xp_give(ctx, GIVE_MESSAGE).await;
-        } else {
-            lmember.xp_take(ctx, TAKE_MESSAGE).await;
-        }
-
-        TIMES
-            .lock()
-            .await
-            .insert(*member.user.id.as_u64(), Utc::now().timestamp_millis());
+    let lock = find_member(ctx, msg.author.id).await;
+    let mut lmember = lock.lock().await;
+    if lmember.enough_passed().await {
+        lmember.xp_give(ctx, GIVE_MESSAGE).await;
+    } else {
+        lmember.xp_take(ctx, TAKE_MESSAGE).await;
     }
+    TIMES
+        .lock()
+        .await
+        .insert(*msg.author.id.as_u64(), Utc::now().timestamp_millis());
 }
 
 pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
@@ -160,18 +156,9 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         return;
     }
 
-    if let Ok(member) = ctx
-        .http
-        .get_member(
-            *reaction.guild_id.expect("Reaction Guild").as_u64(),
-            *message.author.id.as_u64(),
-        )
-        .await
-    {
-        let lock = find_member(&member).await;
-        let mut lmember = lock.lock().await;
-        lmember.xp_give(ctx, GIVE_REACTION).await;
-    }
+    let lock = find_member(ctx, message.author.id).await;
+    let mut lmember = lock.lock().await;
+    lmember.xp_give(ctx, GIVE_REACTION).await;
 }
 
 pub async fn reaction_remove(ctx: &Context, reaction: &Reaction) {
@@ -186,26 +173,15 @@ pub async fn reaction_remove(ctx: &Context, reaction: &Reaction) {
         return;
     }
 
-    if let Ok(member) = ctx
-        .http
-        .get_member(
-            *reaction.guild_id.expect("Reaction Guild").as_u64(),
-            *message.author.id.as_u64(),
-        )
-        .await
-    {
-        let lock = find_member(&member).await;
-        let mut lmember = lock.lock().await;
-        lmember.xp_take(ctx, GIVE_REACTION).await;
-    }
+    let lock = find_member(ctx, message.author.id).await;
+    let mut lmember = lock.lock().await;
+    lmember.xp_take(ctx, GIVE_REACTION).await;
 }
 
 pub async fn message_delete(ctx: &Context, _channel_id: ChannelId, message: Message) {
-    if let Ok(member) = message.member(ctx).await {
-        let lock = find_member(&member).await;
-        let mut lmember = lock.lock().await;
-        lmember.xp_take(ctx, TAKE_DELETE).await;
-    }
+    let lock = find_member(ctx, message.author.id).await;
+    let mut lmember = lock.lock().await;
+    lmember.xp_take(ctx, TAKE_DELETE).await;
 }
 
 pub async fn message_update(
@@ -217,31 +193,36 @@ pub async fn message_update(
     if let Some(old) = old {
         if let Some(new) = new {
             if is_deleted(&old, &new) {
-                if let Ok(member) = new.member(ctx).await {
-                    let lock = find_member(&member).await;
-                    let mut lmember = lock.lock().await;
-                    lmember.xp_take(ctx, TAKE_EDIT).await;
-                }
+                let lock = find_member(ctx, new.author.id).await;
+                let mut lmember = lock.lock().await;
+                lmember.xp_take(ctx, TAKE_EDIT).await;
             }
         }
     }
 }
 
-async fn find_member(member: &Member) -> Arc<Mutex<MemberWithLevel>> {
+async fn find_member<T: AsRef<Http> + Sync + Send>(
+    http: T,
+    user_id: UserId,
+) -> Arc<Mutex<MemberWithLevel>> {
     let mut locks = LOCKS.lock().await;
 
     #[allow(clippy::option_if_let_else)]
-    if let Some(lock) = locks.get(member.user.id.as_u64()) {
+    if let Some(lock) = locks.get(user_id.as_u64()) {
         lock.clone()
     } else {
         locks.insert(
-            *member.user.id.as_u64(),
+            *user_id.as_u64(),
             Arc::new(Mutex::new(MemberWithLevel {
-                member: member.clone(),
+                member: http
+                    .as_ref()
+                    .get_member(*GUILD_ID, *user_id.as_u64())
+                    .await
+                    .expect("member"),
                 xp: None,
             })),
         );
-        locks.get(member.user.id.as_u64()).unwrap().clone()
+        locks.get(user_id.as_u64()).unwrap().clone()
     }
 }
 
