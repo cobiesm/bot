@@ -96,5 +96,6 @@ pub async fn message_update(
 }
 
 pub fn is_deleted(old: &Message, new: &Message) -> bool {
-    normalized_damerau_levenshtein(&old.content, &new.content) < 0.5
+    normalized_damerau_levenshtein(&old.content, &new.content) < 0.4
+        && !new.content.contains(&old.content)
 }
