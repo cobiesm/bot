@@ -12,7 +12,10 @@ pub struct Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, new_message: Message) {
-        if new_message.is_own(&ctx).await || new_message.is_private() {
+        if new_message.is_own(&ctx).await
+            || new_message.is_private()
+            || new_message.webhook_id.is_some()
+        {
             return;
         }
 
