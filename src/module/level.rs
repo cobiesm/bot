@@ -26,15 +26,9 @@ static TAKE_DELETE: f64 = 1.5;
 static TAKE_EDIT: f64 = 1.0;
 
 lazy_static! {
-    static ref EH_ISTE: RoleId = RoleId {
-        0: 763769069605224458
-    };
-    static ref ACE: RoleId = RoleId {
-        0: 664070917801902093
-    };
-    static ref NULL: RoleId = RoleId {
-        0: 717039238423642242
-    };
+    static ref EH_ISTE: RoleId = RoleId(763769069605224458);
+    static ref ACE: RoleId = RoleId(664070917801902093);
+    static ref NULL: RoleId = RoleId(717039238423642242);
     static ref GUILD_ID: u64 = 589415209580625930;
     static ref LEVEL_FINDER: Regex = Regex::new(r"\^(\d+\.\d+)$").unwrap();
     static ref ROLES: HashMap<u64, (f64, bool)> = {
