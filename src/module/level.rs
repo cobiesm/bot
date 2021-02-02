@@ -52,11 +52,15 @@ pub async fn ready(ctx: &Context) {
     let ctx = ctx.clone();
     tokio::spawn(async move {
         loop {
-            let members = ctx
+            let members = if let Ok(members) = ctx
                 .http
                 .get_guild_members(*GUILD_ID, Some(1000), None)
                 .await
-                .unwrap(); // SAFETY: Don't really care if it fails occasionally.
+            {
+                members
+            } else {
+                continue;
+            }; // I was wrong. This shouldn't fail or the bot will go on without this loop.
 
             for mut member in members {
                 let lmember = MemberWithLevel {
