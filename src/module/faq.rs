@@ -42,6 +42,7 @@ pub async fn message(ctx: &Context, new_message: &Message) {
                         .into(),
                 ))
         {
+            new_message.channel_id.broadcast_typing(ctx).await.ok();
             let outcome = &faq.outcome;
             let member = match new_message.member(ctx).await {
                 Ok(member) => member,
