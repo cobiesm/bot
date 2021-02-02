@@ -17,7 +17,7 @@ use tokio::sync::Mutex;
 use super::undelete::is_deleted;
 
 static COOLDOWN_SPAM: i64 = 5000;
-static COOLDOWN_AFK: i64 = 14400000;
+static _COOLDOWN_AFK: i64 = 14400000;
 
 static GIVE_MESSAGE: f64 = 0.05;
 static TAKE_MESSAGE: f64 = 0.01;
@@ -297,7 +297,7 @@ impl MemberWithLevel {
         self.xp_give(cache_http, -amount).await;
     }
 
-    async fn ms_after_last_real_message<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
+    async fn _ms_after_last_real_message<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
         &self,
         cache_http: T,
     ) -> i64 {
