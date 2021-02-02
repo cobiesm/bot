@@ -76,41 +76,42 @@ pub async fn ready(ctx: &Context) {
 
                 let mroles = member.roles.clone();
 
-                for _ in 0..2 {
-                    let add = ROLES
-                        .iter()
-                        .filter_map(|role| {
-                            let xp_req = role.1 .0;
-                            let alone = role.1 .1;
-                            let role = RoleId { 0: *role.0 };
-                            if !mroles.contains(&role)
-                                && lmember.xp_current() >= xp_req
-                                && (!alone || !mroles.contains(&*ACE))
-                            {
-                                Some(role)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<RoleId>>();
+                let add = ROLES
+                    .iter()
+                    .filter_map(|role| {
+                        let xp_req = role.1 .0;
+                        let alone = role.1 .1;
+                        let role = RoleId { 0: *role.0 };
+                        if !mroles.contains(&role)
+                            && lmember.xp_current() >= xp_req
+                            && (!alone || !mroles.contains(&*ACE))
+                        {
+                            Some(role)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<RoleId>>();
+                if !add.is_empty() {
                     member.add_roles(&ctx, &add).await.expect("add_roles");
+                }
 
-                    let del = ROLES
-                        .iter()
-                        .filter_map(|role| {
-                            let xp_req = role.1 .0;
-                            let alone = role.1 .1;
-                            let role = RoleId { 0: *role.0 };
-                            if mroles.contains(&role)
-                                && (lmember.xp_current() < xp_req
-                                    || (alone && mroles.contains(&*ACE)))
-                            {
-                                Some(role)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<RoleId>>();
+                let del = ROLES
+                    .iter()
+                    .filter_map(|role| {
+                        let xp_req = role.1 .0;
+                        let alone = role.1 .1;
+                        let role = RoleId { 0: *role.0 };
+                        if mroles.contains(&role)
+                            && (lmember.xp_current() < xp_req || (alone && mroles.contains(&*ACE)))
+                        {
+                            Some(role)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<RoleId>>();
+                if !del.is_empty() {
                     member.remove_roles(&ctx, &del).await.expect("rm_roles");
                 }
 
