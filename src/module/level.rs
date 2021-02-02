@@ -124,7 +124,7 @@ pub async fn ready(ctx: &Context) {
                     TIMES.lock().await.remove(uid);
                 }
             }
-            std::thread::sleep(Duration::from_secs(60 * 5));
+            tokio::time::sleep(Duration::from_secs(10)).await;
         }
     });
 }

@@ -76,9 +76,10 @@ pub async fn message(ctx: &Context, new_message: &Message) {
                 };
                 for answer in answers.skip(1) {
                     channel.broadcast_typing(&ctx).await.ok();
-                    std::thread::sleep(Duration::from_secs(
+                    tokio::time::sleep(Duration::from_secs(
                         rand::random::<f64>().mul_add(1.1, 1.0) as u64,
-                    ));
+                    ))
+                    .await;
                     message
                         .edit(&ctx, |b| b.content(format!("{}, {}", member, answer)))
                         .await
