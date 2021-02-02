@@ -115,12 +115,14 @@ pub async fn ready(ctx: &Context) {
                     member.remove_roles(&ctx, &del).await.expect("rm_roles");
                 }
 
-                let lock = find_member(&ctx, member.user.id).await;
-                let lmember = lock.lock().await;
-                if lmember.enough_passed().await {
-                    let uid = member.user.id.as_u64();
-                    LOCKS.lock().await.remove(uid);
-                    TIMES.lock().await.remove(uid);
+                let uid = member.user.id.as_u64();
+                if LOCKS.lock().await.contains_key(uid) {
+                    let lock = find_member(&ctx, member.user.id).await;
+                    let lmember = lock.lock().await;
+                    if lmember.enough_passed().await {
+                        LOCKS.lock().await.remove(uid);
+                        TIMES.lock().await.remove(uid);
+                    }
                 }
             }
             tokio::time::sleep(Duration::from_secs(10)).await;
