@@ -91,7 +91,7 @@ impl Muteable for Member {
         if let Some(duration) = duration {
             let mut self_ = self.clone();
             tokio::spawn(async move {
-                tokio::time::delay_for(duration.to_std().expect("duration")).await;
+                tokio::time::sleep(duration.to_std().expect("duration")).await;
                 self_.unmute(http.clone(), None).await.ok();
             });
         }
@@ -118,7 +118,7 @@ impl Muteable for Member {
         let mut self_ = self.clone();
         tokio::spawn(async move {
             if let Some(duration) = duration {
-                tokio::time::delay_for(duration.to_std().expect("duration")).await;
+                tokio::time::sleep(duration.to_std().expect("duration")).await;
             }
 
             self_

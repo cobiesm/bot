@@ -41,7 +41,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         let mut tasks = TASKS.lock().await;
         tasks.push(*message.id.as_u64());
         drop(tasks);
-        tokio::time::delay_for(std::time::Duration::from_secs(5 * 60)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(5 * 60)).await;
         let reactions = calc_reactions(&http, &message).await;
 
         let channel = if let Ok(channel) = http.get_channel(Q_CHANNELID).await {
