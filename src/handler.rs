@@ -19,6 +19,9 @@ impl EventHandler for Handler {
             return;
         }
 
+        #[cfg(debug_assertions)]
+        println!("Message received \"{}\".", new_message.content);
+
         faq::message(&ctx, &new_message).await;
 
         let mut i = 1;
@@ -56,6 +59,9 @@ impl EventHandler for Handler {
             return;
         }
 
+        #[cfg(debug_assertions)]
+        println!("Reaction received \"{}\".", reaction.emoji);
+
         join!(
             selfmod::reaction_add(&ctx, &reaction),
             clap::reaction_add(&ctx, &reaction),
@@ -68,10 +74,16 @@ impl EventHandler for Handler {
             return;
         }
 
+        #[cfg(debug_assertions)]
+        println!("Reaction removed \"{}\".", reaction.emoji);
+
         level::reaction_remove(&ctx, &reaction).await;
     }
 
     async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
+        #[cfg(debug_assertions)]
+        println!("Ready");
+
         join!(presence::ready(&ctx), level::ready(&ctx));
     }
 
@@ -93,6 +105,9 @@ impl EventHandler for Handler {
             return;
         }
 
+        #[cfg(debug_assertions)]
+        println!("Message deleted \"{}\".", message.content);
+
         join!(
             undelete::message_delete(&ctx, channel_id, message.clone()),
             level::message_delete(&ctx, channel_id, message.clone())
@@ -110,7 +125,12 @@ impl EventHandler for Handler {
             if message.is_private() || message.is_own(&ctx).await {
                 return;
             }
+        } else {
+            return;
         }
+
+        #[cfg(debug_assertions)]
+        println!("Message updated \"{}\".", new.clone().unwrap().content);
 
         join!(
             undelete::message_update(&ctx, old.clone(), new.clone(), event.clone()),
