@@ -19,7 +19,7 @@ mod module;
 use module::help::HELP;
 mod muteable;
 
-use serenity::client::Client;
+use serenity::client::{bridge::gateway::GatewayIntents, Client};
 use serenity::framework::standard::macros::hook;
 use serenity::framework::standard::CommandError;
 use serenity::framework::standard::DispatchError;
@@ -33,6 +33,7 @@ use tokio::signal::unix::{signal, SignalKind};
 async fn main() {
     let mut client = Client::builder(&env::var("ROBOTOKEN").expect("token"))
         .event_handler(Handler)
+        .intents(GatewayIntents::all())
         .framework(
             StandardFramework::new()
                 .configure(|c| c.prefix(".").allow_dm(false))
