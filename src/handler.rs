@@ -39,18 +39,22 @@ impl EventHandler for Handler {
             };
         };
 
-        if let Ok(perms) = member.permissions(&ctx).await {
+        let perms = member.permissions(&ctx).await;
+
+        if let Ok(perms) = perms {
             if perms.administrator() {
                 return;
             }
-
-            join!(
-                blacklink::message(&ctx, &new_message),
-                badword::message(&ctx, &new_message),
-                slowmode::message(&ctx, &new_message),
-                level::message(&ctx, &new_message)
-            );
+        } else if let Err(err) = perms {
+            eprintln!("Can't fetch permissions because {}.", err);
         }
+
+        join!(
+            blacklink::message(&ctx, &new_message),
+            badword::message(&ctx, &new_message),
+            slowmode::message(&ctx, &new_message),
+            level::message(&ctx, &new_message)
+        );
     }
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
