@@ -49,7 +49,8 @@ pub async fn message_update(
 
 fn is_blacked(domain: &str) -> Option<&str> {
     for black in &[
-        "Facebook", "Twitter", "Spotify", "WebTekno", "Onedio", "tinyurl",
+        "Facebook", "Twitter", "Spotify", "WebTekno", "Onedio", "tinyurl", "kisa", "cutt",
+        "shorturl",
     ] {
         if normalized_damerau_levenshtein(domain, black) >= 0.55 {
             return Some(black);
