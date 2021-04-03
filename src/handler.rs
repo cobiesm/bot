@@ -30,11 +30,12 @@ impl EventHandler for Handler {
                 Ok(member) => break member,
                 Err(e) => {
                     if i == 10 {
-                        panic!("Couldn't get the member because {}.", e);
-                    } else {
-                        println!("Trying to get member {}", i);
-                        i += 1;
+                        eprintln!("Couldn't get the member because {}.", e);
+                        return;
                     }
+
+                    println!("Trying to get member {}", i);
+                    i += 1;
                 }
             };
         };
