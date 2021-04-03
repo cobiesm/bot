@@ -26,5 +26,5 @@ features = [
     "builder", "cache", "client", "framework", "standard_framework", "model", "utils",
     "absolute_ratelimits", "rustls_backend", "gateway", "http"
 ]
-git = "https://github.com/serenity-rs/serenity"
-branch = "current"
+git = "https://github.com/drklee3/serenity"
+branch = "add-stage-channels"
