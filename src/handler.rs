@@ -39,12 +39,11 @@ impl EventHandler for Handler {
             };
         };
 
-        if !member
-            .permissions(&ctx)
-            .await
-            .expect("permissions for new message's member in cache")
-            .administrator()
-        {
+        if let Ok(perms) = member.permissions(&ctx).await {
+            if perms.administrator() {
+                return;
+            }
+
             join!(
                 blacklink::message(&ctx, &new_message),
                 badword::message(&ctx, &new_message),
