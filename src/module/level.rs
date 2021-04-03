@@ -30,7 +30,7 @@ lazy_static! {
     static ref ACE: RoleId = RoleId(664070917801902093);
     static ref NULL: RoleId = RoleId(717039238423642242);
     static ref GUILD_ID: u64 = 589415209580625930;
-    static ref LEVEL_FINDER: Regex = Regex::new(r"\^(\d+\.\d+)$").unwrap();
+    static ref LEVEL_FINDER: Regex = Regex::new(r"\s\^(\d+\.\d+)").unwrap();
     static ref ROLES: HashMap<u64, (f64, bool)> = {
         let mut roles = HashMap::new();
         roles.insert(EH_ISTE.0, (5.0, true));
@@ -278,7 +278,7 @@ impl MemberWithLevel {
         let name = LEVEL_FINDER.replace(
             &name,
             if xp_new > 0.0 {
-                format!("^{:.2}", xp_new)
+                format!(" ^{:.2}", xp_new)
             } else {
                 String::new()
             }
