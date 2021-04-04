@@ -101,6 +101,7 @@ impl EventHandler for Handler {
         let message = if let Some(message) = ctx.cache.message(channel_id, message_id).await {
             message
         } else {
+            #[cfg(debug_assertions)]
             eprintln!("Could not find the message in cache.");
             return;
         };
