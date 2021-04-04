@@ -44,7 +44,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         .unwrap()
     {
         reaction.channel_id.broadcast_typing(ctx).await.ok();
-        message.delete(ctx).await.ok();
+        message.delete(&ctx.http).await.ok();
         return;
     }
 
@@ -94,7 +94,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let unwanted_noncurse = reacters.len() as f32 >= (ace_count as f32 / 1.4).round();
 
     if unwanted_curse || unwanted_noncurse {
-        message.delete(ctx).await.expect("message.delete");
+        message.delete(&ctx.http).await.expect("message.delete");
 
         if unwanted_curse {
             member
