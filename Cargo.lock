@@ -139,7 +139,7 @@ dependencies = [
 [[package]]
 name = "command_attr"
 version = "0.3.4"
-source = "git+https://github.com/drklee3/serenity?branch=add-stage-channels#8d5d842ef60ea7aecb54b4a8b625835b3007e364"
+source = "git+https://github.com/serenity-rs/serenity?branch=current#95c2f781751f3f107ebc734a2ac4342e607abef5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1093,7 +1093,7 @@ dependencies = [
 [[package]]
 name = "serenity"
 version = "0.10.4"
-source = "git+https://github.com/drklee3/serenity?branch=add-stage-channels#8d5d842ef60ea7aecb54b4a8b625835b3007e364"
+source = "git+https://github.com/serenity-rs/serenity?branch=current#95c2f781751f3f107ebc734a2ac4342e607abef5"
 dependencies = [
  "async-trait",
  "async-tungstenite",
