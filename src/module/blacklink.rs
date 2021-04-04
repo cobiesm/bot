@@ -5,7 +5,7 @@ use strsim::normalized_damerau_levenshtein;
 
 lazy_static! {
     static ref MATCHER: Regex =
-        Regex::new(r"(?ix)(\w+){1}\.[a-z]{2,4}\b(/[a-z0-9@:%\s+.~\#?&/=-]*)?").unwrap();
+        Regex::new(r"(?ix)(?:\w+\.)?(\w+){1}\.[a-z]{2,4}\b(?:/[a-z0-9@:%\s+.~\#?&/=-]*)?").unwrap();
 }
 
 pub async fn message(ctx: &Context, msg: &Message) {
