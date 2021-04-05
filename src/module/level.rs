@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::Utc;
 use regex::Regex;
@@ -63,7 +63,7 @@ pub async fn ready(ctx: &Context) {
                 };
 
                 let time_diff = lmember.ms_after_last_real_message(&ctx).await;
-                if time_diff % COOLDOWN_AFK <= 15000 {
+                if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 1200000 {
                     let lock = find_member(&ctx, member.user.id).await;
                     let mut lmember = lock.lock().await;
                     lmember
@@ -122,7 +122,6 @@ pub async fn ready(ctx: &Context) {
                     }
                 }
             }
-            tokio::time::sleep(Duration::from_secs(10)).await;
         }
     });
 }
