@@ -17,7 +17,7 @@ use tokio::sync::Mutex;
 use super::undelete::is_deleted;
 
 static COOLDOWN_SPAM: i64 = 5000;
-static _COOLDOWN_AFK: i64 = 14400000;
+static COOLDOWN_AFK: i64 = 14400000;
 
 static GIVE_MESSAGE: f64 = 0.05;
 static TAKE_MESSAGE: f64 = 0.01;
@@ -62,17 +62,14 @@ pub async fn ready(ctx: &Context) {
                     xp: None,
                 };
 
-                // TODO: This is being repeated until member becomes unafk but until then we take
-                // all their XPs.
-                // ------------------------------------------------------------------------------
-                //let time_diff = lmember.ms_after_last_real_message(&ctx).await;
-                //if time_diff > COOLDOWN_AFK / 8 {
-                //let lock = find_member(&ctx, member.user.id).await;
-                //let mut lmember = lock.lock().await;
-                //lmember
-                //.xp_take(&ctx, time_diff as f64 / COOLDOWN_AFK as f64)
-                //.await;
-                //}
+                let time_diff = lmember.ms_after_last_real_message(&ctx).await;
+                if time_diff % COOLDOWN_AFK <= 15000 {
+                    let lock = find_member(&ctx, member.user.id).await;
+                    let mut lmember = lock.lock().await;
+                    lmember
+                        .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 4.0)
+                        .await;
+                }
 
                 let mroles = member.roles.clone();
 
@@ -297,7 +294,7 @@ impl MemberWithLevel {
         self.xp_give(cache_http, -amount).await;
     }
 
-    async fn _ms_after_last_real_message<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
+    async fn ms_after_last_real_message<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
         &self,
         cache_http: T,
     ) -> i64 {
