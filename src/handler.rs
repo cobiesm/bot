@@ -64,7 +64,8 @@ impl EventHandler for Handler {
         }
 
         #[cfg(debug_assertions)]
-        println!("Reaction received \"{}\".", reaction.emoji);
+        println!("Reaction received \"{}\" from \"{}\".", reaction.emoji,
+                 reaction.user_id.unwrap().to_user(&ctx).await.unwrap().name);
 
         join!(
             selfmod::reaction_add(&ctx, &reaction),
