@@ -96,15 +96,13 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     if unwanted_curse || unwanted_noncurse {
         message.delete(&ctx.http).await.expect("message.delete");
 
-        if unwanted_curse {
-            member
-                .mute(
-                    ctx.http.clone(),
-                    Some(Duration::minutes(10)),
-                    Some("Diğer üyeler tarafından hoş karşılanmayan bir kelime kullandığın için"),
-                )
-                .await
-                .ok();
-        }
+        member
+            .mute(
+                ctx.http.clone(),
+                Some(Duration::minutes(10)),
+                Some("Diğer üyeler tarafından hoş karşılanmayan bir kelime kullandığın için"),
+            )
+            .await
+            .ok();
     }
 }
