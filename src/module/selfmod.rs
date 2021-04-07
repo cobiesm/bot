@@ -56,15 +56,11 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     };
 
     let ace_count = guild
-        .presences
+        .members(&ctx, None, None)
+        .await
+        .unwrap_or_default()
         .iter()
-        .filter(|presence| {
-            block_on(guild.member(ctx, presence.0))
-                .unwrap()
-                .roles
-                .iter()
-                .any(|role| role == &ace)
-        })
+        .filter(|member| member.roles.iter().any(|role| role == &ace))
         .count();
 
     reaction.channel_id.broadcast_typing(ctx).await.ok();
