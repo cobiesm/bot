@@ -93,7 +93,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
     let unwanted_curse = is_curse && reacters.len() as f32 >= (ace_count as f32 / 2.4).round();
     let unwanted_noncurse = reacters.len() as f32 >= (ace_count as f32 / 1.4).round();
 
-    if unwanted_curse || unwanted_noncurse {
+    if reacters.len() > 1 && (unwanted_curse || unwanted_noncurse) {
         message.delete(&ctx.http).await.expect("message.delete");
 
         member
