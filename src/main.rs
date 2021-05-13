@@ -28,12 +28,14 @@ use serenity::model::channel::{Message, ReactionType};
 use serenity::prelude::Context;
 use std::env;
 use tokio::signal::unix::{signal, SignalKind};
+use nicknamedb::SerenityInit;
 
 #[tokio::main]
 async fn main() {
     let mut client = Client::builder(&env::var("ROBOTOKEN").expect("token"))
         .event_handler(Handler)
         .intents(GatewayIntents::all())
+        .register_nicknamedb('^')
         .framework(
             StandardFramework::new()
                 .configure(|c| c.prefix(".").allow_dm(false))

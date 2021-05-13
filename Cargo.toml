@@ -28,3 +28,6 @@ features = [
 ]
 git = "https://github.com/serenity-rs/serenity"
 branch = "current"
+
+[dependencies.nicknamedb]
+git = "https://github.com/personinblack/nicknamedb"
