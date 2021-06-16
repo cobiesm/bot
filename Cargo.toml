@@ -31,3 +31,8 @@ branch = "current"
 
 [dependencies.nicknamedb]
 git = "https://github.com/personinblack/nicknamedb"
+
+[dependencies.irc]
+version = "0.15"
+default-features = false
+features = ["tls-rust", "ctcp"]

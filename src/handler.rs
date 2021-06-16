@@ -25,7 +25,10 @@ impl EventHandler for Handler {
         #[cfg(debug_assertions)]
         println!("Message received \"{}\".", new_message.content);
 
-        faq::message(&ctx, &new_message).await;
+        join!(
+            faq::message(&ctx, &new_message),
+            irc::message(&ctx, &new_message),
+        );
 
         let mut i = 1;
         let member = loop {
@@ -95,7 +98,7 @@ impl EventHandler for Handler {
         #[cfg(debug_assertions)]
         println!("Ready");
 
-        join!(presence::ready(&ctx), level::ready(&ctx));
+        join!(presence::ready(&ctx), level::ready(&ctx), irc::ready(&ctx));
     }
 
     async fn message_delete(
