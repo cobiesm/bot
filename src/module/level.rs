@@ -16,6 +16,8 @@ use tokio::sync::Mutex;
 
 use super::undelete::is_deleted;
 
+static KEY_LEVEL: char = 'L';
+
 static COOLDOWN_SPAM: i64 = 5000;
 static COOLDOWN_AFK: i64 = 14400000;
 
@@ -39,7 +41,6 @@ lazy_static! {
         roles
     };
     static ref TIMES: Mutex<HashMap<u64, i64>> = Mutex::new(HashMap::new());
-    static ref LOCKS: Mutex<HashMap<u64, Arc<Mutex<MemberWithLevel>>>> = Mutex::new(HashMap::new());
 }
 
 pub async fn ready(ctx: &Context) {
@@ -59,7 +60,6 @@ pub async fn ready(ctx: &Context) {
             for mut member in members {
                 let lmember = MemberWithLevel {
                     member: member.clone(),
-                    xp: None,
                 };
 
                 let time_diff = lmember.ms_after_last_real_message(&ctx).await;
@@ -72,6 +72,7 @@ pub async fn ready(ctx: &Context) {
                 }
 
                 let mroles = member.roles.clone();
+                let xp_current = lmember.xp_current(&ctx).await;
 
                 let add = ROLES
                     .iter()
@@ -80,7 +81,7 @@ pub async fn ready(ctx: &Context) {
                         let alone = role.1 .1;
                         let role = RoleId { 0: *role.0 };
                         if !mroles.contains(&role)
-                            && lmember.xp_current() >= xp_req
+                            && xp_current >= xp_req
                             && (!alone || !mroles.contains(&*ACE))
                         {
                             Some(role)
@@ -100,7 +101,7 @@ pub async fn ready(ctx: &Context) {
                         let alone = role.1 .1;
                         let role = RoleId { 0: *role.0 };
                         if mroles.contains(&role)
-                            && (lmember.xp_current() < xp_req || (alone && mroles.contains(&*ACE)))
+                            && (xp_current < xp_req || (alone && mroles.contains(&*ACE)))
                         {
                             Some(role)
                         } else {
@@ -113,11 +114,10 @@ pub async fn ready(ctx: &Context) {
                 }
 
                 let uid = member.user.id.as_u64();
-                if LOCKS.lock().await.contains_key(uid) {
+                if TIMES.lock().await.contains_key(uid) {
                     let lock = find_member(&ctx, member.user.id).await;
                     let lmember = lock.lock().await;
                     if lmember.enough_passed().await {
-                        LOCKS.lock().await.remove(uid);
                         TIMES.lock().await.remove(uid);
                     }
                 }
@@ -202,30 +202,17 @@ async fn find_member<T: AsRef<Http> + Sync + Send>(
     http: T,
     user_id: UserId,
 ) -> Arc<Mutex<MemberWithLevel>> {
-    let mut locks = LOCKS.lock().await;
-
-    #[allow(clippy::option_if_let_else)]
-    if let Some(lock) = locks.get(user_id.as_u64()) {
-        lock.clone()
-    } else {
-        locks.insert(
-            *user_id.as_u64(),
-            Arc::new(Mutex::new(MemberWithLevel {
-                member: http
-                    .as_ref()
-                    .get_member(*GUILD_ID, *user_id.as_u64())
-                    .await
-                    .expect("member"),
-                xp: None,
-            })),
-        );
-        locks.get(user_id.as_u64()).unwrap().clone()
-    }
+    Arc::new(Mutex::new(MemberWithLevel {
+        member: http
+            .as_ref()
+            .get_member(*GUILD_ID, *user_id.as_u64())
+            .await
+            .expect("member"),
+    }))
 }
 
 struct MemberWithLevel {
     member: Member,
-    xp: Option<f64>,
 }
 
 impl MemberWithLevel {
@@ -240,20 +227,20 @@ impl MemberWithLevel {
         self.ms_after_last_message().await > COOLDOWN_SPAM
     }
 
-    fn xp_current(&self) -> f64 {
-        self.xp.map_or_else(
-            || {
-                LEVEL_FINDER
-                    .captures(self.member.display_name().as_str())
-                    .map_or(0.0, |captures| {
-                        captures.get(1).unwrap().as_str().parse::<f64>().unwrap()
-                    })
-            },
-            |xp| xp,
-        )
+    async fn xp_current(&self, ctx: &Context) -> f64 {
+        let document = nicknamedb::get(ctx)
+            .await
+            .unwrap()
+            .get_document(self.member.clone())
+            .await;
+        let document = document.lock().await;
+        document
+            .fetch('l')
+            .await
+            .map_or(0.0, |xp| xp.parse::<f64>().unwrap())
     }
 
-    async fn xp_give<T: AsRef<Http> + Sync + Send>(&mut self, http: T, amount: f64) {
+    async fn xp_give(&mut self, ctx: &Context, amount: f64) {
         if (0.0..0.005).contains(&amount) {
             return;
         }
@@ -261,36 +248,32 @@ impl MemberWithLevel {
         #[cfg(debug_assertions)]
         println!("Giving {} XP to {}.", amount, &self.member.distinct());
 
-        let mut name = self.member.display_name().as_ref().clone();
+        let document = nicknamedb::get(ctx)
+            .await
+            .unwrap()
+            .get_document(self.member.clone())
+            .await;
+        let mut document = document.lock().await;
 
-        if !LEVEL_FINDER.is_match(&name) {
-            name.push_str(" ^0.0");
+        let xp_new = document
+            .fetch(KEY_LEVEL)
+            .await
+            .map_or(amount, |xp| xp.parse::<f64>().unwrap() + amount)
+            .max(0.0);
+        if xp_new > 0.0 {
+            document.insert(KEY_LEVEL, format!("{:.2}", xp_new)).await;
+        } else {
+            document.delete::<String>(KEY_LEVEL, None).await;
         }
 
-        let mut xp_new = self.xp_current() + amount;
-
-        xp_new = xp_new.max(0.0);
-
-        let name = LEVEL_FINDER.replace(
-            &name,
-            if xp_new > 0.0 {
-                format!(" ^{:.2}", xp_new)
-            } else {
-                String::new()
-            }
-            .as_str(),
-        );
-
-        self.member.edit(http, |e| e.nickname(name)).await.ok();
-        self.xp = Some(xp_new);
+        self.member
+            .edit(ctx, |m| m.nickname(&document.name))
+            .await
+            .unwrap();
     }
 
-    async fn xp_take<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
-        &mut self,
-        cache_http: T,
-        amount: f64,
-    ) {
-        self.xp_give(cache_http, -amount).await;
+    async fn xp_take(&mut self, ctx: &Context, amount: f64) {
+        self.xp_give(ctx, -amount).await;
     }
 
     async fn ms_after_last_real_message<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
