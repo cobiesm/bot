@@ -9,13 +9,14 @@ use tokio::join;
 
 pub struct Handler;
 
+fn shouldnt_handle(message: &Message) -> bool {
+    message.author.bot || message.is_private() || message.webhook_id.is_some()
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, new_message: Message) {
-        if new_message.is_own(&ctx).await
-            || new_message.is_private()
-            || new_message.webhook_id.is_some()
-        {
+        if shouldnt_handle(&new_message) {
             return;
         }
 
@@ -59,13 +60,16 @@ impl EventHandler for Handler {
     }
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-        if reaction.guild_id.is_none() || reaction.user(&ctx).await.expect("user").bot {
+        if shouldnt_handle(&reaction.message(&ctx).await.expect("message")) {
             return;
         }
 
         #[cfg(debug_assertions)]
-        println!("Reaction received \"{}\" from \"{}\".", reaction.emoji,
-                 reaction.user_id.unwrap().to_user(&ctx).await.unwrap().name);
+        println!(
+            "Reaction received \"{}\" from \"{}\".",
+            reaction.emoji,
+            reaction.user_id.unwrap().to_user(&ctx).await.unwrap().name
+        );
 
         join!(
             selfmod::reaction_add(&ctx, &reaction),
@@ -75,7 +79,7 @@ impl EventHandler for Handler {
     }
 
     async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
-        if reaction.guild_id.is_none() || reaction.user(&ctx).await.expect("user").bot {
+        if shouldnt_handle(&reaction.message(&ctx).await.expect("message")) {
             return;
         }
 
@@ -107,7 +111,7 @@ impl EventHandler for Handler {
             return;
         };
 
-        if message.is_private() || message.is_own(&ctx).await {
+        if shouldnt_handle(&message) {
             return;
         }
 
@@ -128,7 +132,7 @@ impl EventHandler for Handler {
         event: MessageUpdateEvent,
     ) {
         if let Some(message) = &new {
-            if message.is_private() || message.is_own(&ctx).await {
+            if shouldnt_handle(message) {
                 return;
             }
         } else {
