@@ -22,7 +22,7 @@ async fn send_message(message: String) {
 }
 
 pub async fn message(ctx: &Context, message: &serenity::model::channel::Message) {
-    if message.channel_id != 589415209580625933 || message.content.is_empty() {
+    if message.channel_id != 589415209580625933 {
         return;
     }
 
@@ -39,7 +39,7 @@ pub async fn message(ctx: &Context, message: &serenity::model::channel::Message)
         "[{}] {}{}",
         message.author.name,
         attachments,
-        content.next().unwrap()
+        content.next().unwrap_or(&String::new())
     ))
     .await;
 
