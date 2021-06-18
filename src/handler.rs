@@ -151,6 +151,7 @@ impl EventHandler for Handler {
             undelete::message_update(&ctx, old.clone(), new.clone(), event.clone()),
             level::message_update(&ctx, old.clone(), new.clone(), event.clone()),
             blacklink::message_update(&ctx, old.clone(), new.clone(), event.clone()),
+            irc::message_update(&ctx, old.clone(), new.clone(), event.clone()),
         );
     }
 }

@@ -2,6 +2,7 @@ use futures::prelude::*;
 use irc::client::prelude::*;
 use irc::client::ClientStream;
 use serenity::client::Context;
+use serenity::model::event::MessageUpdateEvent;
 use tokio::sync::Mutex;
 
 static IRC_CHANNEL: &str = "##hello_world";
@@ -44,6 +45,17 @@ pub async fn message(ctx: &Context, message: &serenity::model::channel::Message)
 
     for subcontent in content {
         send_message(format!("[{}] {}", message.author.name, subcontent)).await;
+    }
+}
+
+pub async fn message_update(
+    ctx: &Context,
+    _old: Option<serenity::model::channel::Message>,
+    new: Option<serenity::model::channel::Message>,
+    _event: MessageUpdateEvent,
+) {
+    if let Some(new) = new {
+        message(ctx, &new).await;
     }
 }
 
