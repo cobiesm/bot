@@ -1,4 +1,6 @@
-use crate::module::{badword, blacklink, clap, faq, level, presence, selfmod, slowmode, undelete};
+use crate::module::{
+    badword, blacklink, clap, faq, irc, level, presence, selfmod, slowmode, undelete,
+};
 use serenity::model::channel::{Message, Reaction};
 use serenity::model::gateway::Ready;
 use serenity::model::id::{ChannelId, MessageId};

@@ -19,6 +19,7 @@ mod module;
 use module::help::HELP;
 mod muteable;
 
+use nicknamedb::SerenityInit;
 use serenity::client::{bridge::gateway::GatewayIntents, Client};
 use serenity::framework::standard::macros::hook;
 use serenity::framework::standard::CommandError;
@@ -28,7 +29,6 @@ use serenity::model::channel::{Message, ReactionType};
 use serenity::prelude::Context;
 use std::env;
 use tokio::signal::unix::{signal, SignalKind};
-use nicknamedb::SerenityInit;
 
 #[tokio::main]
 async fn main() {
