@@ -10,24 +10,40 @@ lazy_static! {
     static ref IRC_PASS: String = std::env::var("IRCPASS").expect("$IRCPASS");
 }
 
-pub async fn message(_ctx: &Context, message: &serenity::model::channel::Message) {
+async fn send_message(message: String) {
+    let client = IRC_CLIENT.lock().await;
+    let client = client.as_ref().expect("IRC Client");
+
+    client
+        .send(Command::PRIVMSG(String::from(IRC_CHANNEL), message))
+        .expect("IRC Send PRIVMSG");
+}
+
+pub async fn message(ctx: &Context, message: &serenity::model::channel::Message) {
     if message.channel_id != 589415209580625933 || message.content.is_empty() {
         return;
     }
 
-    let mut client = IRC_CLIENT.lock().await;
-    let client = client.as_mut().expect("IRC Client");
+    let attachments = message
+        .attachments
+        .iter()
+        .map(|att| format!("<{}> ", att.proxy_url))
+        .collect::<String>();
 
-    client
-        .send(Command::PRIVMSG(
-            String::from(IRC_CHANNEL),
-            format!(
-                "{}; {}",
-                message.author.name,
-                message.content.clone()
-            ),
-        ))
-        .expect("IRC Send PRIVMSG");
+    let content = message.content_safe(&ctx).await;
+    let mut content = content.split('\n');
+
+    send_message(format!(
+        "[{}] {}{}",
+        message.author.name,
+        attachments,
+        content.next().unwrap()
+    ))
+    .await;
+
+    for subcontent in content {
+        send_message(format!("[{}] {}", message.author.name, subcontent)).await;
+    }
 }
 
 pub async fn ready(ctx: &Context) {
