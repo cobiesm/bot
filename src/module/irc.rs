@@ -65,13 +65,17 @@ pub async fn ready(ctx: &Context) {
     irc_client
         .send_cap_req(&[Capability::Sasl])
         .expect("IRC Cap");
-    irc_client.send(Command::PASS(IRC_PASS.to_string())).unwrap();
+    irc_client
+        .send(Command::PASS(IRC_PASS.to_string()))
+        .unwrap();
     irc_client.send(Command::NICK("hwbot".to_string())).unwrap();
-    irc_client.send(Command::USER(
+    irc_client
+        .send(Command::USER(
             "menfie".to_string(),
             "0".to_owned(),
             "menfie".to_string(),
-            )).unwrap();
+        ))
+        .unwrap();
 
     *IRC_CLIENT.lock().await = Some(irc_client);
 
@@ -103,14 +107,23 @@ pub async fn ready(ctx: &Context) {
                             .send_sasl_plain()
                             .expect("IRC SASL plain");
                     }
-                },
+                }
                 Command::AUTHENTICATE(_) => {
                     println!("Got signal to continue authenticating");
                     let client = IRC_CLIENT.lock().await;
                     let client = client.as_ref().expect("IRC Client");
-                    client.send(Command::AUTHENTICATE(base64::encode(format!("{}\x00{}\x00{}", "menfie", "menfie", IRC_PASS.to_string())))).unwrap();
-                    client.send(Command::CAP(None, "END".parse().unwrap(), None, None)).unwrap();
-                },
+                    client
+                        .send(Command::AUTHENTICATE(base64::encode(format!(
+                            "{}\x00{}\x00{}",
+                            "menfie",
+                            "menfie",
+                            IRC_PASS.to_string()
+                        ))))
+                        .unwrap();
+                    client
+                        .send(Command::CAP(None, "END".parse().unwrap(), None, None))
+                        .unwrap();
+                }
                 Command::Response(code, _) => {
                     if code == &Response::RPL_SASLSUCCESS {
                         println!("Successfully authenticated");
@@ -122,7 +135,7 @@ pub async fn ready(ctx: &Context) {
                             .send(Command::CAP(None, "END".parse().unwrap(), None, None))
                             .unwrap();
                     }
-                },
+                }
                 Command::ERROR(err) => {
                     println!("{}", err);
                 }
