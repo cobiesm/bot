@@ -54,7 +54,8 @@ pub async fn message_update(
     new: Option<serenity::model::channel::Message>,
     _event: MessageUpdateEvent,
 ) {
-    if let Some(new) = new {
+    if let Some(mut new) = new {
+        new.content += "~";
         message(ctx, &new).await;
     }
 }
