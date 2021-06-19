@@ -186,7 +186,10 @@ pub async fn ready(ctx: &Context) {
                             continue;
                         }
 
-                        hook.execute(&ctx, false, |w| w.content(msg).username(sender))
+                        let msg_stripped =
+                            msg.replace("everyone", "every0ne").replace("here", "her3");
+
+                        hook.execute(&ctx, false, |w| w.content(msg_stripped).username(sender))
                             .await
                             .ok();
                     }
