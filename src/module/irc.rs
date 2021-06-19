@@ -3,6 +3,7 @@ use irc::client::prelude::*;
 use irc::client::ClientStream;
 use serenity::client::Context;
 use serenity::model::event::MessageUpdateEvent;
+use strsim::normalized_damerau_levenshtein;
 use tokio::sync::Mutex;
 
 static IRC_CHANNEL: &str = "##hello_world";
@@ -50,11 +51,19 @@ pub async fn message(ctx: &Context, message: &serenity::model::channel::Message)
 
 pub async fn message_update(
     ctx: &Context,
-    _old: Option<serenity::model::channel::Message>,
+    old: Option<serenity::model::channel::Message>,
     new: Option<serenity::model::channel::Message>,
     _event: MessageUpdateEvent,
 ) {
     if let Some(mut new) = new {
+        if let Some(old) = old {
+            if normalized_damerau_levenshtein(&old.content, &new.content) > 0.8
+                || new.content.contains(&old.content)
+            {
+                return;
+            }
+        }
+
         new.content += "~";
         message(ctx, &new).await;
     }
