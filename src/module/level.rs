@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use chrono::Utc;
 use regex::Regex;
@@ -64,8 +64,7 @@ pub async fn ready(ctx: &Context) {
 
                 let time_diff = lmember.ms_after_last_real_message(&ctx).await;
                 if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 1200000 {
-                    let lock = find_member(&ctx, member.user.id).await;
-                    let mut lmember = lock.lock().await;
+                    let mut lmember = find_member(&ctx, member.user.id).await;
                     lmember
                         .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 4.0)
                         .await;
@@ -126,8 +125,7 @@ pub async fn ready(ctx: &Context) {
 
                 let uid = member.user.id.as_u64();
                 if TIMES.lock().await.contains_key(uid) {
-                    let lock = find_member(&ctx, member.user.id).await;
-                    let lmember = lock.lock().await;
+                    let lmember = find_member(&ctx, member.user.id).await;
                     if lmember.enough_passed().await {
                         TIMES.lock().await.remove(uid);
                     }
@@ -138,8 +136,7 @@ pub async fn ready(ctx: &Context) {
 }
 
 pub async fn message(ctx: &Context, msg: &Message) {
-    let lock = find_member(ctx, msg.author.id).await;
-    let mut lmember = lock.lock().await;
+    let mut lmember = find_member(ctx, msg.author.id).await;
     if lmember.enough_passed().await {
         lmember.xp_give(ctx, GIVE_MESSAGE).await;
     } else {
@@ -164,8 +161,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
         return;
     }
 
-    let lock = find_member(ctx, message.author.id).await;
-    let mut lmember = lock.lock().await;
+    let mut lmember = find_member(ctx, message.author.id).await;
     lmember.xp_give(ctx, GIVE_REACTION).await;
 }
 
@@ -181,14 +177,12 @@ pub async fn reaction_remove(ctx: &Context, reaction: &Reaction) {
         return;
     }
 
-    let lock = find_member(ctx, message.author.id).await;
-    let mut lmember = lock.lock().await;
+    let mut lmember = find_member(ctx, message.author.id).await;
     lmember.xp_take(ctx, GIVE_REACTION).await;
 }
 
 pub async fn message_delete(ctx: &Context, _channel_id: ChannelId, message: Message) {
-    let lock = find_member(ctx, message.author.id).await;
-    let mut lmember = lock.lock().await;
+    let mut lmember = find_member(ctx, message.author.id).await;
     lmember.xp_take(ctx, TAKE_DELETE).await;
 }
 
@@ -201,8 +195,7 @@ pub async fn message_update(
     if let Some(old) = old {
         if let Some(new) = new {
             if is_deleted(&old, &new) {
-                let lock = find_member(ctx, new.author.id).await;
-                let mut lmember = lock.lock().await;
+                let mut lmember = find_member(ctx, new.author.id).await;
                 lmember.xp_take(ctx, TAKE_EDIT).await;
             }
         }
@@ -212,14 +205,14 @@ pub async fn message_update(
 async fn find_member<T: AsRef<Http> + Sync + Send>(
     http: T,
     user_id: UserId,
-) -> Arc<Mutex<MemberWithLevel>> {
-    Arc::new(Mutex::new(MemberWithLevel {
+) -> MemberWithLevel {
+    MemberWithLevel {
         member: http
             .as_ref()
             .get_member(*GUILD_ID, *user_id.as_u64())
             .await
             .expect("member"),
-    }))
+    }
 }
 
 struct MemberWithLevel {
