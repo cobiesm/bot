@@ -15,6 +15,34 @@ fn shouldnt_handle(message: &Message) -> bool {
     message.author.bot || message.is_private() || message.webhook_id.is_some()
 }
 
+async fn is_admin(ctx: &Context, message: &Message) -> bool {
+    let mut i = 1;
+    let member = loop {
+        match message.member(&ctx).await {
+            Ok(member) => break member,
+            Err(e) => {
+                if i == 10 {
+                    eprintln!("Couldn't get the member because {}.", e);
+                    return false;
+                }
+
+                println!("Trying to get member {}", i);
+                i += 1;
+            }
+        };
+    };
+
+    let perms = member.permissions(&ctx).await;
+
+    if let Ok(perms) = perms {
+        return perms.administrator();
+    } else if let Err(err) = perms {
+        eprintln!("Can't fetch permissions because {}.", err);
+    }
+
+    false
+}
+
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, new_message: Message) {
@@ -30,42 +58,19 @@ impl EventHandler for Handler {
             irc::message(&ctx, &new_message),
         );
 
-        let mut i = 1;
-        let member = loop {
-            match new_message.member(&ctx).await {
-                Ok(member) => break member,
-                Err(e) => {
-                    if i == 10 {
-                        eprintln!("Couldn't get the member because {}.", e);
-                        return;
-                    }
-
-                    println!("Trying to get member {}", i);
-                    i += 1;
-                }
-            };
-        };
-
-        let perms = member.permissions(&ctx).await;
-
-        if let Ok(perms) = perms {
-            if perms.administrator() {
-                return;
-            }
-        } else if let Err(err) = perms {
-            eprintln!("Can't fetch permissions because {}.", err);
+        if !is_admin(&ctx, &new_message).await {
+            join!(
+                blacklink::message(&ctx, &new_message),
+                badword::message(&ctx, &new_message),
+                slowmode::message(&ctx, &new_message),
+                level::message(&ctx, &new_message)
+            );
         }
-
-        join!(
-            blacklink::message(&ctx, &new_message),
-            badword::message(&ctx, &new_message),
-            slowmode::message(&ctx, &new_message),
-            level::message(&ctx, &new_message)
-        );
     }
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-        if shouldnt_handle(&reaction.message(&ctx).await.expect("message")) {
+        let message = reaction.message(&ctx).await.expect("message");
+        if shouldnt_handle(&message) {
             return;
         }
 
@@ -79,19 +84,25 @@ impl EventHandler for Handler {
         join!(
             selfmod::reaction_add(&ctx, &reaction),
             clap::reaction_add(&ctx, &reaction),
-            level::reaction_add(&ctx, &reaction)
         );
+
+        if !is_admin(&ctx, &message).await {
+            level::reaction_add(&ctx, &reaction).await
+        }
     }
 
     async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
-        if shouldnt_handle(&reaction.message(&ctx).await.expect("message")) {
+        let message = reaction.message(&ctx).await.expect("message");
+        if shouldnt_handle(&message) {
             return;
         }
 
         #[cfg(debug_assertions)]
         println!("Reaction removed \"{}\".", reaction.emoji);
 
-        level::reaction_remove(&ctx, &reaction).await;
+        if !is_admin(&ctx, &message).await {
+            level::reaction_remove(&ctx, &reaction).await;
+        }
     }
 
     async fn ready(&self, ctx: Context, _data_about_bot: Ready) {
@@ -123,10 +134,12 @@ impl EventHandler for Handler {
         #[cfg(debug_assertions)]
         println!("Message deleted \"{}\".", message.content);
 
-        join!(
-            undelete::message_delete(&ctx, channel_id, message.clone()),
-            level::message_delete(&ctx, channel_id, message.clone())
-        );
+        if !is_admin(&ctx, &message).await {
+            join!(
+                undelete::message_delete(&ctx, channel_id, message.clone()),
+                level::message_delete(&ctx, channel_id, message.clone())
+            );
+        }
     }
 
     async fn message_update(
@@ -149,9 +162,12 @@ impl EventHandler for Handler {
 
         join!(
             undelete::message_update(&ctx, old.clone(), new.clone(), event.clone()),
-            level::message_update(&ctx, old.clone(), new.clone(), event.clone()),
             blacklink::message_update(&ctx, old.clone(), new.clone(), event.clone()),
             irc::message_update(&ctx, old.clone(), new.clone(), event.clone()),
         );
+
+        if !is_admin(&ctx, new.as_ref().unwrap()).await {
+            level::message_update(&ctx, old.clone(), new.clone(), event.clone()).await;
+        }
     }
 }
