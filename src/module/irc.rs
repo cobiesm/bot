@@ -57,7 +57,7 @@ pub async fn message_update(
 ) {
     if let Some(mut new) = new {
         if let Some(old) = old {
-            if normalized_damerau_levenshtein(&old.content, &new.content) > 0.8
+            if normalized_damerau_levenshtein(&old.content, &new.content) > 0.98
                 || new.content.contains(&old.content)
             {
                 return;
