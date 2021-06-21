@@ -246,7 +246,7 @@ impl MemberWithLevel {
             .await;
         let document = document.lock().await;
         document
-            .fetch('l')
+            .fetch('L')
             .await
             .map_or(0.0, |xp| xp.parse::<f64>().unwrap())
     }
