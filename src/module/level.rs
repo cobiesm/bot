@@ -113,6 +113,17 @@ pub async fn ready(ctx: &Context) {
                     member.remove_roles(&ctx, &del).await.expect("rm_roles");
                 }
 
+                if !add.is_empty() || !del.is_empty() {
+                    #[cfg(debug_assertions)]
+                    println!(
+                        "levelloop member: {}, xp: {}, add: {:?}, del: {:?}",
+                        member.display_name(),
+                        xp_current,
+                        add,
+                        del
+                    );
+                }
+
                 let uid = member.user.id.as_u64();
                 if TIMES.lock().await.contains_key(uid) {
                     let lock = find_member(&ctx, member.user.id).await;
