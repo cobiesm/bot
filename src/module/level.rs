@@ -202,10 +202,7 @@ pub async fn message_update(
     }
 }
 
-async fn find_member<T: AsRef<Http> + Sync + Send>(
-    http: T,
-    user_id: UserId,
-) -> MemberWithLevel {
+async fn find_member<T: AsRef<Http> + Sync + Send>(http: T, user_id: UserId) -> MemberWithLevel {
     MemberWithLevel {
         member: http
             .as_ref()
