@@ -11,14 +11,46 @@ use tokio::join;
 
 pub struct Handler;
 
-fn shouldnt_handle(message: &Message) -> bool {
-    message.author.bot || message.is_private() || message.webhook_id.is_some()
+async fn shouldnt_handle(ctx: &Context, message: &Message) -> bool {
+    #[cfg(debug_assertions)]
+    println!(
+        "{}: {},{},{:?}",
+        message.content,
+        message.author.bot,
+        message.is_private(),
+        message.webhook_id
+    );
+
+    message.author.bot
+        || (message.is_private()
+            && ctx
+                .http
+                .get_channel(message.channel_id.0)
+                .await
+                .expect("channel")
+                .guild()
+                .is_none())
+        || message.webhook_id.is_some()
 }
 
 async fn is_admin(ctx: &Context, message: &Message) -> bool {
     let mut i = 1;
     let member = loop {
-        match message.member(&ctx).await {
+        match ctx
+            .http
+            .get_member(
+                ctx.http
+                    .get_channel(message.channel_id.0)
+                    .await
+                    .expect("channel")
+                    .guild()
+                    .expect("guild")
+                    .guild_id
+                    .0,
+                message.author.id.0,
+            )
+            .await
+        {
             Ok(member) => break member,
             Err(e) => {
                 if i == 10 {
@@ -46,7 +78,7 @@ async fn is_admin(ctx: &Context, message: &Message) -> bool {
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, ctx: Context, new_message: Message) {
-        if shouldnt_handle(&new_message) {
+        if shouldnt_handle(&ctx, &new_message).await {
             return;
         }
 
@@ -69,16 +101,22 @@ impl EventHandler for Handler {
     }
 
     async fn reaction_add(&self, ctx: Context, reaction: Reaction) {
-        let message = reaction.message(&ctx).await.expect("message");
-        if shouldnt_handle(&message) {
+        let message = ctx
+            .http
+            .get_message(reaction.channel_id.0, reaction.message_id.0)
+            .await
+            .expect("message");
+        if shouldnt_handle(&ctx, &message).await {
             return;
         }
 
         #[cfg(debug_assertions)]
         println!(
-            "Reaction received \"{}\" from \"{}\".",
+            "Reaction received \"{}\" from \"{}\". At channel \"{}\" to message \"{}\".",
             reaction.emoji,
-            reaction.user_id.unwrap().to_user(&ctx).await.unwrap().name
+            reaction.user_id.unwrap().to_user(&ctx).await.unwrap().name,
+            reaction.channel_id.0,
+            reaction.message_id.0,
         );
 
         join!(
@@ -93,7 +131,7 @@ impl EventHandler for Handler {
 
     async fn reaction_remove(&self, ctx: Context, reaction: Reaction) {
         let message = reaction.message(&ctx).await.expect("message");
-        if shouldnt_handle(&message) {
+        if shouldnt_handle(&ctx, &message).await {
             return;
         }
 
@@ -127,7 +165,7 @@ impl EventHandler for Handler {
             return;
         };
 
-        if shouldnt_handle(&message) {
+        if shouldnt_handle(&ctx, &message).await {
             return;
         }
 
@@ -150,7 +188,7 @@ impl EventHandler for Handler {
         event: MessageUpdateEvent,
     ) {
         if let Some(message) = &new {
-            if shouldnt_handle(message) {
+            if shouldnt_handle(&ctx, message).await {
                 return;
             }
         } else {
