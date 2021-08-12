@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use chrono::Utc;
 use regex::Regex;
@@ -12,7 +12,7 @@ use serenity::{
         id::{ChannelId, RoleId, UserId},
     },
 };
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, time::sleep};
 
 use super::undelete::is_deleted;
 
@@ -57,79 +57,84 @@ pub async fn ready(ctx: &Context) {
                 continue;
             }; // I was wrong. This shouldn't fail or the bot will go on without this loop.
 
+            // TODO: wait for all tasks to finish before starting another loop
             for mut member in members {
-                let lmember = MemberWithLevel {
-                    member: member.clone(),
-                };
+                sleep(Duration::from_millis(5000)).await;
+                let ctx = ctx.clone();
+                tokio::spawn(async move {
+                    let lmember = MemberWithLevel {
+                        member: member.clone(),
+                    };
 
-                let time_diff = lmember.ms_after_last_real_message(&ctx).await;
-                if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 1200000 {
-                    let mut lmember = find_member(&ctx, member.user.id).await;
-                    lmember
-                        .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 4.0)
-                        .await;
-                }
-
-                let mroles = member.roles.clone();
-                let xp_current = lmember.xp_current(&ctx).await;
-
-                let add = ROLES
-                    .iter()
-                    .filter_map(|role| {
-                        let xp_req = role.1 .0;
-                        let alone = role.1 .1;
-                        let role = RoleId { 0: *role.0 };
-                        if !mroles.contains(&role)
-                            && xp_current >= xp_req
-                            && (!alone || !mroles.contains(&*ACE))
-                        {
-                            Some(role)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<RoleId>>();
-                if !add.is_empty() {
-                    member.add_roles(&ctx, &add).await.expect("add_roles");
-                }
-
-                let del = ROLES
-                    .iter()
-                    .filter_map(|role| {
-                        let xp_req = role.1 .0;
-                        let alone = role.1 .1;
-                        let role = RoleId { 0: *role.0 };
-                        if mroles.contains(&role)
-                            && (xp_current < xp_req || (alone && mroles.contains(&*ACE)))
-                        {
-                            Some(role)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect::<Vec<RoleId>>();
-                if !del.is_empty() {
-                    member.remove_roles(&ctx, &del).await.expect("rm_roles");
-                }
-
-                if !add.is_empty() || !del.is_empty() {
-                    #[cfg(debug_assertions)]
-                    println!(
-                        "levelloop member: {}, xp: {}, add: {:?}, del: {:?}",
-                        member.display_name(),
-                        xp_current,
-                        add,
-                        del
-                    );
-                }
-
-                let uid = member.user.id.as_u64();
-                if TIMES.lock().await.contains_key(uid) {
-                    let lmember = find_member(&ctx, member.user.id).await;
-                    if lmember.enough_passed().await {
-                        TIMES.lock().await.remove(uid);
+                    let time_diff = lmember.ms_after_last_real_message(&ctx).await;
+                    if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 1200000 {
+                        let mut lmember = find_member(&ctx, member.user.id).await;
+                        lmember
+                            .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 4.0)
+                            .await;
                     }
-                }
+
+                    let mroles = member.roles.clone();
+                    let xp_current = lmember.xp_current(&ctx).await;
+
+                    let add = ROLES
+                        .iter()
+                        .filter_map(|role| {
+                            let xp_req = role.1 .0;
+                            let alone = role.1 .1;
+                            let role = RoleId { 0: *role.0 };
+                            if !mroles.contains(&role)
+                                && xp_current >= xp_req
+                                && (!alone || !mroles.contains(&*ACE))
+                            {
+                                Some(role)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<RoleId>>();
+                    if !add.is_empty() {
+                        member.add_roles(&ctx, &add).await.expect("add_roles");
+                    }
+
+                    let del = ROLES
+                        .iter()
+                        .filter_map(|role| {
+                            let xp_req = role.1 .0;
+                            let alone = role.1 .1;
+                            let role = RoleId { 0: *role.0 };
+                            if mroles.contains(&role)
+                                && (xp_current < xp_req || (alone && mroles.contains(&*ACE)))
+                            {
+                                Some(role)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<RoleId>>();
+                    if !del.is_empty() {
+                        member.remove_roles(&ctx, &del).await.expect("rm_roles");
+                    }
+
+                    if !add.is_empty() || !del.is_empty() {
+                        #[cfg(debug_assertions)]
+                        println!(
+                            "LevelLoop Member: {}, XP: {}, Add: {:?}, Del: {:?}",
+                            member.display_name(),
+                            xp_current,
+                            add,
+                            del
+                        );
+                    }
+
+                    let uid = member.user.id.as_u64();
+                    if TIMES.lock().await.contains_key(uid) {
+                        let lmember = find_member(&ctx, member.user.id).await;
+                        if lmember.enough_passed().await {
+                            TIMES.lock().await.remove(uid);
+                        }
+                    }
+                });
             }
         }
     });
