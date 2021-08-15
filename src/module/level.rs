@@ -19,7 +19,7 @@ use super::undelete::is_deleted;
 static KEY_LEVEL: char = 'L';
 
 static COOLDOWN_SPAM: i64 = 5000;
-static COOLDOWN_AFK: i64 = 14400000;
+static COOLDOWN_AFK: i64 = 86400000; // now 24h, previously 4h (14400000ms)
 
 static GIVE_MESSAGE: f64 = 0.05;
 static TAKE_MESSAGE: f64 = 0.01;
@@ -70,7 +70,7 @@ pub async fn ready(ctx: &Context) {
                     if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 660000 {
                         let mut lmember = find_member(&ctx, member.user.id).await;
                         lmember
-                            .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 4.0)
+                            .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 48.0)
                             .await;
                     }
 
