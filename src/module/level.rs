@@ -67,7 +67,7 @@ pub async fn ready(ctx: &Context) {
                     };
 
                     let time_diff = lmember.ms_after_last_real_message(&ctx).await;
-                    if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 1200000 {
+                    if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 660000 {
                         let mut lmember = find_member(&ctx, member.user.id).await;
                         lmember
                             .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 4.0)
