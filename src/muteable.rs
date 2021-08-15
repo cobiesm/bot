@@ -77,9 +77,10 @@ impl Muteable for Member {
 
         if let Some(duration) = duration {
             message.push_str(&format!(
-                " ({} saat, {} dakika)",
+                " ({} saat, {} dakika, {} saniye)",
                 duration.num_hours(),
-                duration.num_minutes() % 60
+                duration.num_minutes() % 60,
+                duration.num_seconds() % 3600,
             ));
         }
 
