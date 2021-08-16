@@ -94,7 +94,7 @@ pub async fn reaction_add(ctx: &Context, reaction: &Reaction) {
 
         member
             .mute(
-                ctx.http.clone(),
+                ctx.clone(),
                 Some(Duration::minutes(10)),
                 Some("Diğer üyeler tarafından hoş karşılanmayan bir kelime kullandığın için"),
             )

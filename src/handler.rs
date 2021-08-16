@@ -1,5 +1,5 @@
 use crate::module::{
-    badword, blacklink, clap, faq, irc, level, presence, selfmod, slowmode, undelete,
+    badword, blacklink, clap, faq, irc, level, mute, presence, selfmod, slowmode, undelete,
 };
 use serenity::model::channel::{Message, Reaction};
 use serenity::model::gateway::Ready;
@@ -147,7 +147,12 @@ impl EventHandler for Handler {
         #[cfg(debug_assertions)]
         println!("Ready");
 
-        join!(presence::ready(&ctx), level::ready(&ctx), irc::ready(&ctx));
+        join!(
+            presence::ready(&ctx),
+            level::ready(&ctx),
+            irc::ready(&ctx),
+            mute::ready(&ctx)
+        );
     }
 
     async fn message_delete(

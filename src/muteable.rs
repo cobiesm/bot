@@ -1,48 +1,48 @@
-// TODO: Manage multiple mute executions with different durations. We don't want the previous mute
-// if we have a new one.
-
-use std::sync::Arc;
-
 use async_trait::async_trait;
+use chrono::prelude::*;
 use chrono::Duration;
-use serenity::{
-    http::Http,
-    model::{
-        channel::PermissionOverwrite, channel::PermissionOverwriteType, guild::Member, Permissions,
-    },
+use serenity::client::Context;
+use serenity::model::{
+    channel::PermissionOverwrite, channel::PermissionOverwriteType, guild::Member, Permissions,
 };
+
+static KEY_MUTE: char = 'M';
+
+lazy_static! {
+    static ref TIME_START: DateTime<Utc> = Utc.ymd(2021, 4, 4).and_hms(0, 0, 0);
+}
 
 #[async_trait]
 pub trait Muteable {
     async fn mute<T>(
         &mut self,
-        http: Arc<Http>,
+        ctx: Context,
         duration: Option<Duration>,
         reason: Option<T>,
     ) -> serenity::Result<()>
     where
         T: Into<String> + Send;
-    async fn unmute(&mut self, http: Arc<Http>, duration: Option<Duration>)
-        -> serenity::Result<()>;
+    async fn unmute(&mut self, ctx: Context, duration: Option<Duration>) -> serenity::Result<()>;
+    async fn try_unmute(&mut self, ctx: Context);
 }
 
 #[async_trait]
 impl Muteable for Member {
     async fn mute<T>(
         &mut self,
-        http: Arc<Http>,
+        ctx: Context,
         duration: Option<Duration>,
         reason: Option<T>,
     ) -> serenity::Result<()>
     where
         T: Into<String> + Send,
     {
-        let guild = self.guild_id.to_partial_guild(http.as_ref()).await?;
+        let guild = self.guild_id.to_partial_guild(&ctx).await?;
         let roleid = if let Some(role) = guild.role_by_name("Muted") {
             role.id
         } else {
             let role = guild
-                .create_role(http.as_ref(), |builder| {
+                .create_role(&ctx, |builder| {
                     builder.name("Muted").mentionable(true).colour(818_386)
                 })
                 .await?;
@@ -52,10 +52,10 @@ impl Muteable for Member {
             deny.insert(Permissions::SPEAK);
             deny.insert(Permissions::ADD_REACTIONS);
 
-            for channel in guild.channels(http.as_ref()).await?.values() {
+            for channel in guild.channels(&ctx).await?.values() {
                 channel
                     .create_permission(
-                        http.as_ref(),
+                        &ctx,
                         &PermissionOverwrite {
                             allow,
                             deny,
@@ -68,7 +68,26 @@ impl Muteable for Member {
             role.id
         };
 
-        self.add_role(http.as_ref(), roleid).await?;
+        self.add_role(&ctx, roleid).await?;
+        {
+            let document = nicknamedb::get(&ctx)
+                .await
+                .unwrap()
+                .get_document(self.clone())
+                .await;
+            let mut document = document.lock().await;
+            if let Some(duration) = duration {
+                document
+                    .insert(
+                        KEY_MUTE,
+                        ((Utc::now() + duration) - *TIME_START)
+                            .num_seconds()
+                            .to_string(),
+                    )
+                    .await;
+                self.edit(&ctx, |m| m.nickname(&document.name)).await.ok();
+            }
+        }
 
         let mut message = format!(
             "{} susturuldun.",
@@ -85,28 +104,17 @@ impl Muteable for Member {
         }
 
         self.user
-            .direct_message(http.clone(), |m| m.content(message))
+            .direct_message(&ctx, |m| m.content(message))
             .await
             .ok();
 
-        if let Some(duration) = duration {
-            let mut self_ = self.clone();
-            tokio::spawn(async move {
-                tokio::time::sleep(duration.to_std().expect("duration")).await;
-                self_.unmute(http.clone(), None).await.ok();
-            });
-        }
         Ok(())
     }
 
-    async fn unmute(
-        &mut self,
-        http: Arc<Http>,
-        duration: Option<Duration>,
-    ) -> serenity::Result<()> {
+    async fn unmute(&mut self, ctx: Context, duration: Option<Duration>) -> serenity::Result<()> {
         let role = match self
             .guild_id
-            .to_partial_guild(http.as_ref())
+            .to_partial_guild(&ctx)
             .await?
             .role_by_name("Muted")
         {
@@ -123,15 +131,41 @@ impl Muteable for Member {
             }
 
             self_
-                .remove_role(http.as_ref(), role)
+                .remove_role(&ctx, role)
                 .await
                 .expect("member.remove_role");
+            {
+                let document = nicknamedb::get(&ctx)
+                    .await
+                    .unwrap()
+                    .get_document(self_.clone())
+                    .await;
+                let mut document = document.lock().await;
+                document.delete::<String>(KEY_MUTE, None).await;
+                self_.edit(&ctx, |m| m.nickname(&document.name)).await.ok();
+            }
+
             self_
                 .user
-                .direct_message(http, |m| m.content("Artık konuşabilirsin."))
+                .direct_message(&ctx, |m| m.content("Artık konuşabilirsin."))
                 .await
                 .ok();
         });
         Ok(())
+    }
+
+    async fn try_unmute(&mut self, ctx: Context) {
+        let document = nicknamedb::get(&ctx)
+            .await
+            .unwrap()
+            .get_document(self.clone())
+            .await;
+        let document = document.lock().await;
+        let duration = document.fetch(KEY_MUTE).await;
+        if let Some(duration) = duration {
+            if Utc::now() - *TIME_START >= Duration::seconds(duration.parse::<i64>().unwrap()) {
+                self.unmute(ctx, None).await.ok();
+            }
+        }
     }
 }

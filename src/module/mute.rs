@@ -8,6 +8,9 @@ use serenity::{
     framework::standard::CommandError, framework::standard::CommandResult, model::channel::Message,
     model::guild::Member,
 };
+use tokio::time::sleep;
+
+static GUILD_ID: u64 = 589415209580625930;
 
 lazy_static! {
     static ref DURATION: Regex = Regex::new(r"^(\d+)(\w?)$").unwrap();
@@ -26,7 +29,7 @@ pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 
     find_member(ctx, msg, &name)
         .await?
-        .mute(ctx.http.clone(), time_conv(&time_str), reason)
+        .mute(ctx.clone(), time_conv(&time_str), reason)
         .await
         .map_err(CommandError::from)
 }
@@ -39,9 +42,29 @@ pub async fn unmute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResu
 
     find_member(ctx, msg, &name)
         .await?
-        .unmute(ctx.http.clone(), time_conv(&time_str))
+        .unmute(ctx.clone(), time_conv(&time_str))
         .await
         .map_err(CommandError::from)
+}
+
+pub async fn ready(ctx: &Context) {
+    let ctx = ctx.clone();
+    tokio::spawn(async move {
+        loop {
+            sleep(Duration::seconds(3).to_std().unwrap()).await;
+
+            let members =
+                if let Ok(members) = ctx.http.get_guild_members(GUILD_ID, Some(1000), None).await {
+                    members
+                } else {
+                    continue;
+                };
+
+            for mut member in members {
+                member.try_unmute(ctx.clone()).await;
+            }
+        }
+    });
 }
 
 pub async fn find_member(ctx: &Context, msg: &Message, name: &str) -> serenity::Result<Member> {
