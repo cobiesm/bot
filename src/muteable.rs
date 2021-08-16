@@ -81,7 +81,7 @@ impl Muteable for Member {
                     .insert(
                         KEY_MUTE,
                         ((Utc::now() + duration) - *TIME_START)
-                            .num_seconds()
+                            .num_minutes()
                             .to_string(),
                     )
                     .await;
@@ -163,7 +163,7 @@ impl Muteable for Member {
         let document = document.lock().await;
         let duration = document.fetch(KEY_MUTE).await;
         if let Some(duration) = duration {
-            if Utc::now() - *TIME_START >= Duration::seconds(duration.parse::<i64>().unwrap()) {
+            if Utc::now() - *TIME_START >= Duration::minutes(duration.parse::<i64>().unwrap()) {
                 self.unmute(ctx, None).await.ok();
             }
         }
