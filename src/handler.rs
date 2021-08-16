@@ -125,7 +125,7 @@ impl EventHandler for Handler {
         );
 
         if !is_admin(&ctx, &message).await {
-            level::reaction_add(&ctx, &reaction).await
+            level::reaction_add(&ctx, &reaction).await;
         }
     }
 
