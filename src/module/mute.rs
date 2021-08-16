@@ -18,7 +18,11 @@ lazy_static! {
 pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let name = args.single::<String>()?;
     let time_str = args.single::<String>()?;
-    let reason = args.remains();
+    let reason = if args.len() > 2 {
+        args.rewind().remains()
+    } else {
+        args.remains()
+    };
 
     find_member(ctx, msg, &name)
         .await?
