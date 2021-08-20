@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::Duration};
 use chrono::Utc;
 use regex::Regex;
 use serenity::{
-    client::{Cache, Context},
+    client::Context,
     http::Http,
     model::{
         channel::{Message, Reaction},
@@ -19,7 +19,6 @@ use super::undelete::is_deleted;
 static KEY_LEVEL: char = 'L';
 
 static COOLDOWN_SPAM: i64 = 5000;
-static COOLDOWN_AFK: i64 = 86400000; // now 24h, previously 4h (14400000ms)
 
 static GIVE_MESSAGE: f64 = 0.05;
 static TAKE_MESSAGE: f64 = 0.01;
@@ -65,14 +64,6 @@ pub async fn ready(ctx: &Context) {
                     let lmember = MemberWithLevel {
                         member: member.clone(),
                     };
-
-                    let time_diff = lmember.ms_after_last_real_message(&ctx).await;
-                    if time_diff >= COOLDOWN_AFK && time_diff % COOLDOWN_AFK <= 660000 {
-                        let mut lmember = find_member(&ctx, member.user.id).await;
-                        lmember
-                            .xp_take(&ctx, time_diff as f64 / 1000.0 / 60.0 / 60.0 / 48.0)
-                            .await;
-                    }
 
                     let mroles = member.roles.clone();
                     let xp_current = lmember.xp_current(&ctx).await;
@@ -280,29 +271,5 @@ impl MemberWithLevel {
 
     async fn xp_take(&mut self, ctx: &Context, amount: f64) {
         self.xp_give(ctx, -amount).await;
-    }
-
-    async fn ms_after_last_real_message<T: AsRef<Http> + AsRef<Cache> + Sync + Send>(
-        &self,
-        cache_http: T,
-    ) -> i64 {
-        let mut last_millis = 0;
-
-        for val in self
-            .member
-            .guild_id
-            .channels(&cache_http)
-            .await
-            .unwrap()
-            .values()
-        {
-            if let Ok(mes) = val.messages(&cache_http, |buil| buil.limit(1)).await {
-                if let Some(mes) = mes.first() {
-                    last_millis = last_millis.max(mes.timestamp.timestamp_millis());
-                }
-            }
-        }
-
-        Utc::now().timestamp_millis() - last_millis
     }
 }
