@@ -20,7 +20,13 @@ lazy_static! {
 #[max_args(3)]
 pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let name = args.single::<String>()?;
-    let time_str = args.single::<String>()?;
+
+    let time_str = if args.len() > 1 {
+        args.single::<String>()?
+    } else {
+        String::new()
+    };
+
     let reason = if args.len() > 2 {
         args.rewind().remains()
     } else {
