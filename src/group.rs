@@ -1,4 +1,5 @@
 use crate::module::addemoji::ADDEMOJI_COMMAND;
+use crate::module::level::LEVEL_COMMAND;
 use crate::module::mute::{MUTE_COMMAND, UNMUTE_COMMAND};
 use crate::module::purge::PURGE_COMMAND;
 use crate::module::uwu::UWU_COMMAND;
@@ -21,3 +22,8 @@ pub struct Fun;
 #[allowed_roles("ACE")]
 #[only_in(guilds)]
 pub struct Ace;
+
+#[group]
+#[commands(level)]
+#[only_in(guilds)]
+pub struct Everyone;

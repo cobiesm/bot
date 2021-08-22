@@ -4,6 +4,7 @@ use chrono::Utc;
 use regex::Regex;
 use serenity::{
     client::Context,
+    framework::standard::{macros::command, Args, CommandResult},
     http::Http,
     model::{
         channel::{Message, Reaction},
@@ -20,11 +21,13 @@ static KEY_LEVEL: char = 'L';
 
 static COOLDOWN_SPAM: i64 = 5000;
 
-static GIVE_MESSAGE: f64 = 0.05;
-static TAKE_MESSAGE: f64 = 0.01;
-static GIVE_REACTION: f64 = 2.0;
-static TAKE_DELETE: f64 = 1.5;
-static TAKE_EDIT: f64 = 1.0;
+static LEVEL_MULTIPLIER: f64 = 0.3;
+
+static GIVE_MESSAGE: f64 = 0.1;
+static TAKE_MESSAGE: f64 = 0.02;
+static GIVE_REACTION: f64 = 3.0;
+static TAKE_DELETE: f64 = 2.0;
+static TAKE_EDIT: f64 = 1.5;
 
 lazy_static! {
     static ref EH_ISTE: RoleId = RoleId(763769069605224458);
@@ -32,14 +35,39 @@ lazy_static! {
     static ref NULL: RoleId = RoleId(717039238423642242);
     static ref GUILD_ID: u64 = 589415209580625930;
     static ref LEVEL_FINDER: Regex = Regex::new(r"\s\^(\d+\.\d+)").unwrap();
-    static ref ROLES: HashMap<u64, (f64, bool)> = {
+    static ref ROLES: HashMap<u64, (i32, bool)> = {
         let mut roles = HashMap::new();
-        roles.insert(EH_ISTE.0, (5.0, true));
-        roles.insert(ACE.0, (20.0, false));
-        roles.insert(NULL.0, (100.0, false));
+        roles.insert(EH_ISTE.0, (5, true));
+        roles.insert(ACE.0, (20, false));
+        roles.insert(NULL.0, (100, false));
         roles
     };
     static ref TIMES: Mutex<HashMap<u64, i64>> = Mutex::new(HashMap::new());
+}
+
+#[command]
+#[max_args(1)]
+pub async fn level(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let sender = find_member(&ctx, msg.author.id).await;
+
+    let mut member = sender.clone();
+    if let Some(role) = sender.member.highest_role_info(&ctx).await {
+        if role.0 == RoleId(589415787668701185) && args.len() == 1 {
+            let id = args.single::<String>()?;
+            member = find_member(
+                &ctx,
+                UserId {
+                    0: id.parse::<u64>()?,
+                },
+            )
+            .await;
+        }
+    }
+
+    let level = member.level(ctx).await;
+
+    msg.reply(&ctx, format!("Level: {}", level)).await?;
+    Ok(())
 }
 
 pub async fn ready(ctx: &Context) {
@@ -66,16 +94,16 @@ pub async fn ready(ctx: &Context) {
                     };
 
                     let mroles = member.roles.clone();
-                    let xp_current = lmember.xp_current(&ctx).await;
+                    let level_current = lmember.level(&ctx).await;
 
                     let add = ROLES
                         .iter()
                         .filter_map(|role| {
-                            let xp_req = role.1 .0;
+                            let level_req = role.1 .0;
                             let alone = role.1 .1;
                             let role = RoleId { 0: *role.0 };
                             if !mroles.contains(&role)
-                                && xp_current >= xp_req
+                                && level_current >= level_req
                                 && (!alone || !mroles.contains(&*ACE))
                             {
                                 Some(role)
@@ -91,11 +119,11 @@ pub async fn ready(ctx: &Context) {
                     let del = ROLES
                         .iter()
                         .filter_map(|role| {
-                            let xp_req = role.1 .0;
+                            let level_req = role.1 .0;
                             let alone = role.1 .1;
                             let role = RoleId { 0: *role.0 };
                             if mroles.contains(&role)
-                                && (xp_current < xp_req || (alone && mroles.contains(&*ACE)))
+                                && (level_current < level_req || (alone && mroles.contains(&*ACE)))
                             {
                                 Some(role)
                             } else {
@@ -110,9 +138,9 @@ pub async fn ready(ctx: &Context) {
                     if !add.is_empty() || !del.is_empty() {
                         #[cfg(debug_assertions)]
                         println!(
-                            "LevelLoop Member: {}, XP: {}, Add: {:?}, Del: {:?}",
+                            "LevelLoop Member: {}, Level: {}, Add: {:?}, Del: {:?}",
                             member.display_name(),
-                            xp_current,
+                            level_current,
                             add,
                             del
                         );
@@ -208,6 +236,7 @@ async fn find_member<T: AsRef<Http> + Sync + Send>(http: T, user_id: UserId) -> 
     }
 }
 
+#[derive(Clone)]
 struct MemberWithLevel {
     member: Member,
 }
@@ -222,6 +251,26 @@ impl MemberWithLevel {
 
     async fn enough_passed(&self) -> bool {
         self.ms_after_last_message().await > COOLDOWN_SPAM
+    }
+
+    fn xp_req(level: i32) -> f64 {
+        f64::from(level) * LEVEL_MULTIPLIER
+    }
+
+    async fn level(&self, ctx: &Context) -> i32 {
+        let mut xp = self.xp_current(ctx).await;
+        let mut level = 1;
+        while xp > 0.0 {
+            let xp_req = Self::xp_req(level);
+            if xp >= xp_req {
+                xp -= xp_req;
+                level += 1;
+            } else {
+                break;
+            }
+        }
+
+        level
     }
 
     async fn xp_current(&self, ctx: &Context) -> f64 {

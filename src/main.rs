@@ -12,7 +12,7 @@
 extern crate lazy_static;
 
 mod group;
-use group::{ACE_GROUP, ADMIN_GROUP, FUN_GROUP};
+use group::{ACE_GROUP, ADMIN_GROUP, EVERYONE_GROUP, FUN_GROUP};
 mod handler;
 use handler::Handler;
 mod module;
@@ -48,6 +48,7 @@ async fn main() {
                 .group(&ADMIN_GROUP)
                 .group(&FUN_GROUP)
                 .group(&ACE_GROUP)
+                .group(&EVERYONE_GROUP)
                 .on_dispatch_error(dispatch_error_hook),
         )
         .await
