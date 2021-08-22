@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use futures::prelude::*;
 use irc::client::prelude::*;
 use irc::client::ClientStream;
@@ -13,13 +15,15 @@ lazy_static! {
     static ref IRC_PASS: String = std::env::var("IRCPASS").expect("$IRCPASS");
 }
 
-async fn send_message(message: String) {
+async fn send_message(ctx: &Context, message: String) {
     let client = IRC_CLIENT.lock().await;
     let client = client.as_ref().expect("IRC Client");
 
-    client
-        .send(Command::PRIVMSG(String::from(IRC_CHANNEL), message))
-        .expect("IRC Send PRIVMSG");
+    match client.send(Command::PRIVMSG(String::from(IRC_CHANNEL), message)) {
+        Err(irc::error::Error::AsyncChannelClosed) => ready(ctx).await,
+        Err(e) => println!("IRC Send PRIVMSG: {}", e),
+        Ok(()) => (),
+    };
 }
 
 pub async fn message(ctx: &Context, message: &serenity::model::channel::Message) {
@@ -33,19 +37,22 @@ pub async fn message(ctx: &Context, message: &serenity::model::channel::Message)
         .map(|att| format!("<{}> ", att.proxy_url))
         .collect::<String>();
 
-    let content = message.content_safe(&ctx).await;
+    let content = message.content_safe(ctx).await;
     let mut content = content.split('\n');
 
-    send_message(format!(
-        "[13{}00] {}{}",
-        message.author.name,
-        attachments,
-        content.next().unwrap_or(&String::new())
-    ))
+    send_message(
+        ctx,
+        format!(
+            "[13{}00] {}{}",
+            message.author.name,
+            attachments,
+            content.next().unwrap_or(&String::new())
+        ),
+    )
     .await;
 
     for subcontent in content {
-        send_message(format!("[13{}00] {}", message.author.name, subcontent)).await;
+        send_message(ctx, format!("[13{}00] {}", message.author.name, subcontent)).await;
     }
 }
 
@@ -134,6 +141,11 @@ async fn authenticate(stream: &mut ClientStream) {
 }
 
 pub async fn ready(ctx: &Context) {
+    if let Some(irc_client) = IRC_CLIENT.lock().await.as_ref() {
+        irc_client.send_quit("Yeniden bağlanıyorum...").ok();
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+
     let mut irc_client = Client::from_config(Config {
         nickname: Some(String::from("hwbot")),
         realname: Some(String::from("hwbot")),
