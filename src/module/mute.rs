@@ -27,11 +27,7 @@ pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         String::new()
     };
 
-    let reason = if args.len() > 2 {
-        args.rewind().remains()
-    } else {
-        args.remains()
-    };
+    let reason = args.remains();
 
     find_member(ctx, msg, &name)
         .await?
