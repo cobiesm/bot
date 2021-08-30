@@ -89,10 +89,7 @@ impl Muteable for Member {
             }
         }
 
-        let mut message = format!(
-            "{} susturuldun.",
-            reason.map_or_else(|| "Sebep belirtilmeksizin".into(), T::into)
-        );
+        let mut message = reason.map_or("Sebep belirtilmeksizin susturuldun.".into(), T::into);
 
         if let Some(duration) = duration {
             message.push_str(&format!(
