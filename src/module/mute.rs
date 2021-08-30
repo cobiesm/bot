@@ -44,7 +44,11 @@ pub async fn mute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 #[max_args(2)]
 pub async fn unmute(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let name = args.single::<String>()?;
-    let time_str = args.single::<String>()?;
+    let time_str = if args.len() > 1 {
+        args.single::<String>()?
+    } else {
+        String::new()
+    };
 
     find_member(ctx, msg, &name)
         .await?
