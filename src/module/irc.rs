@@ -43,7 +43,7 @@ pub async fn message(ctx: &Context, message: &serenity::model::channel::Message)
     send_message(
         ctx,
         format!(
-            "[13{}00] {}{}",
+            "[13{}00] {}{}",
             message.author.name,
             attachments,
             content.next().unwrap_or(&String::new())
@@ -52,7 +52,7 @@ pub async fn message(ctx: &Context, message: &serenity::model::channel::Message)
     .await;
 
     for subcontent in content {
-        send_message(ctx, format!("[13{}00] {}", message.author.name, subcontent)).await;
+        send_message(ctx, format!("[13{}00] {}", message.author.name, subcontent)).await;
     }
 }
 
