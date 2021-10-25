@@ -76,57 +76,45 @@ pub async fn message_update(
     }
 }
 
-async fn authenticate(stream: &mut ClientStream) {
+async fn authenticate(stream: &mut ClientStream) -> Result<(), irc::error::Error> {
     let mut irc_client = IRC_CLIENT.lock().await;
     let irc_client = irc_client.as_mut().expect("IRC Client");
 
-    irc_client
-        .send_cap_req(&[Capability::Sasl])
-        .expect("IRC Cap");
+    irc_client.send_cap_req(&[Capability::Sasl])?;
 
-    irc_client
-        .send(Command::PASS(IRC_PASS.to_string()))
-        .unwrap();
+    irc_client.send(Command::PASS(IRC_PASS.to_string()))?;
 
-    irc_client.send(Command::NICK("hwbot".to_string())).unwrap();
+    irc_client.send(Command::NICK("hwbot".to_string()))?;
 
-    irc_client
-        .send(Command::USER(
-            "menfie".to_string(),
-            "0".to_owned(),
-            "menfie".to_string(),
-        ))
-        .unwrap();
+    irc_client.send(Command::USER(
+        "menfie".to_string(),
+        "0".to_owned(),
+        "menfie".to_string(),
+    ))?;
 
-    while let Some(message) = stream.next().await.transpose().expect("IRC Message") {
+    while let Some(message) = stream.next().await.transpose()? {
         match &message.command {
             Command::CAP(_, ref subcommand, _, _) => {
                 if subcommand.to_str() == "ACK" {
                     println!("Recieved ack for sasl");
-                    irc_client.send_sasl_plain().expect("IRC SASL plain");
+                    irc_client.send_sasl_plain()?;
                 }
             }
             Command::AUTHENTICATE(_) => {
                 println!("Got signal to continue authenticating");
-                irc_client
-                    .send(Command::AUTHENTICATE(base64::encode(format!(
-                        "{}\x00{}\x00{}",
-                        "menfie",
-                        "menfie",
-                        IRC_PASS.to_string()
-                    ))))
-                    .unwrap();
+                irc_client.send(Command::AUTHENTICATE(base64::encode(format!(
+                    "{}\x00{}\x00{}",
+                    "menfie",
+                    "menfie",
+                    IRC_PASS.to_string()
+                ))))?;
 
-                irc_client
-                    .send(Command::CAP(None, "END".parse().unwrap(), None, None))
-                    .unwrap();
+                irc_client.send(Command::CAP(None, "END".parse().unwrap(), None, None))?;
             }
             Command::Response(code, _) => {
                 if code == &Response::RPL_SASLSUCCESS {
                     println!("Successfully authenticated");
-                    irc_client
-                        .send(Command::CAP(None, "END".parse().unwrap(), None, None))
-                        .unwrap();
+                    irc_client.send(Command::CAP(None, "END".parse().unwrap(), None, None))?;
                     break;
                 }
             }
@@ -138,35 +126,44 @@ async fn authenticate(stream: &mut ClientStream) {
     }
 
     println!("Authentication ended");
+    Ok(())
 }
 
 pub async fn ready(ctx: &Context) {
-    if let Some(irc_client) = IRC_CLIENT.lock().await.as_ref() {
-        irc_client.send_quit("Yeniden bağlanıyorum...").ok();
-        tokio::time::sleep(Duration::from_secs(1)).await;
+    async fn new_client() -> ClientStream {
+        if let Some(irc_client) = IRC_CLIENT.lock().await.as_ref() {
+            irc_client.send_quit("Yeniden bağlanıyorum...").ok();
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+
+        let mut irc_client = Client::from_config(Config {
+            nickname: Some(String::from("hwbot")),
+            realname: Some(String::from("hwbot")),
+            username: Some(String::from("menfie")),
+            password: Some(IRC_PASS.to_string()),
+            owners: vec![String::from("menfie")],
+            server: Some(String::from("irc.libera.chat")),
+            port: Some(6697),
+            use_tls: Some(true),
+            channels: vec![String::from(IRC_CHANNEL)],
+            umodes: Some(String::from("+iR")),
+            ..Config::default()
+        })
+        .await
+        .expect("IRC Client");
+
+        let stream = irc_client.stream().expect("IRC Stream");
+        *IRC_CLIENT.lock().await = Some(irc_client);
+        stream
     }
 
-    let mut irc_client = Client::from_config(Config {
-        nickname: Some(String::from("hwbot")),
-        realname: Some(String::from("hwbot")),
-        username: Some(String::from("menfie")),
-        password: Some(IRC_PASS.to_string()),
-        owners: vec![String::from("menfie")],
-        server: Some(String::from("irc.libera.chat")),
-        port: Some(6697),
-        use_tls: Some(true),
-        channels: vec![String::from(IRC_CHANNEL)],
-        umodes: Some(String::from("+iR")),
-        ..Config::default()
-    })
-    .await
-    .expect("IRC Client");
+    let mut stream = new_client().await;
 
-    let mut stream = irc_client.stream().expect("IRC Stream");
-
-    *IRC_CLIENT.lock().await = Some(irc_client);
-
-    authenticate(&mut stream).await;
+    while let Err(e) = authenticate(&mut stream).await {
+        println!("Got an error while authenticating will retry: {}", e);
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        stream = new_client().await;
+    }
 
     let ctx = ctx.clone();
     tokio::spawn(async move {
