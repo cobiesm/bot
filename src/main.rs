@@ -1,7 +1,7 @@
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
 #![deny(clippy::nursery)]
-#![allow(clippy::used_underscore_binding)]
+#![allow(clippy::no_effect_underscore_binding)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::cast_precision_loss)]

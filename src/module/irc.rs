@@ -106,7 +106,7 @@ async fn authenticate(stream: &mut ClientStream) -> Result<(), irc::error::Error
                     "{}\x00{}\x00{}",
                     "menfie",
                     "menfie",
-                    IRC_PASS.to_string()
+                    *IRC_PASS
                 ))))?;
 
                 irc_client.send(Command::CAP(None, "END".parse().unwrap(), None, None))?;
