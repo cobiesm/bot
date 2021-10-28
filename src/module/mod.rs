@@ -7,6 +7,7 @@ pub mod help;
 pub mod irc;
 pub mod level;
 pub mod mute;
+pub mod poll;
 pub mod presence;
 pub mod purge;
 pub mod selfmod;
