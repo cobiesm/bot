@@ -33,6 +33,7 @@ use tokio::signal::unix::{signal, SignalKind};
 #[tokio::main]
 async fn main() {
     let mut client = Client::builder(&env::var("ROBOTOKEN").expect("token"))
+        .application_id(451203258913128460)
         .event_handler(Handler)
         .intents(GatewayIntents::all())
         .register_nicknamedb('^')

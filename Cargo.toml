@@ -24,7 +24,7 @@ async-recursion = "0.3"
 default-features = false
 features = [
     "builder", "cache", "client", "framework", "standard_framework", "model", "utils",
-    "absolute_ratelimits", "rustls_backend", "gateway", "http"
+    "absolute_ratelimits", "rustls_backend", "gateway", "http", "unstable_discord_api"
 ]
 git = "https://github.com/serenity-rs/serenity"
 branch = "current"
