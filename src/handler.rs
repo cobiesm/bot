@@ -1,9 +1,10 @@
 use crate::module::{
-    badword, blacklink, clap, faq, irc, level, mute, presence, selfmod, slowmode, undelete,
+    badword, blacklink, clap, faq, irc, level, mute, poll, presence, selfmod, slowmode, undelete,
 };
 use serenity::model::channel::{Message, Reaction};
 use serenity::model::gateway::Ready;
 use serenity::model::id::{ChannelId, MessageId};
+use serenity::model::interactions::Interaction;
 use serenity::prelude::EventHandler;
 use serenity::{async_trait, model::event::MessageUpdateEvent};
 use serenity::{client::Context, model::id::GuildId};
@@ -212,5 +213,9 @@ impl EventHandler for Handler {
         if !is_admin(&ctx, new.as_ref().unwrap()).await {
             level::message_update(&ctx, old.clone(), new.clone(), event.clone()).await;
         }
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        poll::interaction_create(ctx, interaction).await;
     }
 }
