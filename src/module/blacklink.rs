@@ -52,7 +52,7 @@ fn is_blacked(domain: &str) -> Option<&str> {
         "Facebook", "Twitter", "Spotify", "WebTekno", "Onedio", "tinyurl", "kisa", "cutt",
         "shorturl",
     ] {
-        if normalized_damerau_levenshtein(domain, black) >= 0.55 {
+        if normalized_damerau_levenshtein(domain, black) >= 0.65 {
             return Some(black);
         }
     }
