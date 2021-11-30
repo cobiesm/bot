@@ -14,3 +14,4 @@ pub mod slowmode;
 pub mod undelete;
 pub mod uwu;
 pub mod yarra;
+pub mod exchange;
